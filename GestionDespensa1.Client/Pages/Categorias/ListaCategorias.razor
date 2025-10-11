@@ -1,0 +1,130 @@
+﻿@page "/categorias"
+@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Entidades
+@inject ICategoriaService CategoriaService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Categorías - GestionDespensa</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3><i class="fas fa-tags me-2"></i>Lista de Categorías</h3>
+    <button class="btn btn-primary" @onclick="NuevaCategoria">
+        <i class="fas fa-plus me-1"></i> Nueva Categoría
+    </button>
+</div>
+
+@if (cargando)
+{
+    <div class="alert alert-info text-center">
+        <i class="fas fa-spinner fa-spin me-2"></i>Cargando categorías...
+    </div>
+}
+else if (!string.IsNullOrEmpty(mensajeError))
+{
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>@mensajeError
+    </div>
+}
+else if (!categorias.Any())
+{
+    <div class="alert alert-warning text-center">
+        <i class="fas fa-tags me-2"></i>No hay categorías registradas
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre de Categoría</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var categoria in categorias)
+                        {
+                            <tr>
+                                <td class="fw-bold">#@categoria.Id</td>
+                                <td>
+                                    <span class="badge bg-primary fs-6">@categoria.NombreCategoria</span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-warning me-1" @onclick="() => EditarCategoria(categoria.Id)"
+                                            title="Editar categoría">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => EliminarCategoria(categoria.Id)"
+                                            title="Eliminar categoría">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<CategoriaDTO> categorias = new();
+    private bool cargando = true;
+    private string mensajeError = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarCategorias();
+    }
+
+    private async Task CargarCategorias()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        var respuesta = await CategoriaService.Get();
+
+        if (respuesta.Error)
+        {
+            mensajeError = await respuesta.ObtenerError();
+        }
+        else
+        {
+            categorias = respuesta.Respuesta ?? new List<CategoriaDTO>();
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void NuevaCategoria() => Navigation.NavigateTo("/categorias/nuevo");
+    private void EditarCategoria(int id) => Navigation.NavigateTo($"/categorias/editar/{id}");
+
+    private async Task EliminarCategoria(int id)
+    {
+        var categoria = categorias.FirstOrDefault(c => c.Id == id);
+        if (categoria == null) return;
+
+        var confirmado = await JS.InvokeAsync<bool>("confirm",
+            $"¿Está seguro de eliminar la categoría '{categoria.NombreCategoria}'?\n\nEsta acción no se puede deshacer.");
+
+        if (confirmado)
+        {
+            var respuesta = await CategoriaService.Delete(id);
+            if (!respuesta.Error)
+            {
+                await CargarCategorias();
+                await JS.InvokeVoidAsync("alert", "✅ Categoría eliminada exitosamente");
+            }
+            else
+            {
+                mensajeError = await respuesta.ObtenerError();
+            }
+        }
+    }
+}

@@ -1,0 +1,223 @@
+﻿@page "/productos/nuevo"
+@page "/productos/editar/{Id:int}"
+@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Entidades
+@inject IProductoService ProductoService
+@inject ICategoriaService CategoriaService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>@Titulo - GestionDespensa</PageTitle>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas @Icono me-2"></i>@Titulo</h4>
+    </div>
+    <div class="card-body">
+        @if (categoriasCargando)
+        {
+            <div class="alert alert-info text-center">
+                <i class="fas fa-spinner fa-spin me-2"></i>Cargando categorías...
+            </div>
+        }
+        else if (!categorias.Any())
+        {
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                No hay categorías disponibles.
+                <a href="/categorias/nuevo" class="alert-link">Crear una categoría primero</a>
+            </div>
+        }
+        else
+        {
+            <EditForm Model="producto" OnValidSubmit="GuardarProducto">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="alert alert-danger" />
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="descripcion" class="form-label fw-bold">Descripción *</label>
+                            <InputText id="descripcion" @bind-Value="producto.Descripcion" class="form-control"
+                                       placeholder="Ingrese la descripción del producto" />
+                            <ValidationMessage For="@(() => producto.Descripcion)" class="text-danger small" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="categoria" class="form-label fw-bold">Categoría *</label>
+                            <InputSelect id="categoria" @bind-Value="producto.IdCategoria" class="form-control">
+                                <option value="0">Seleccione una categoría</option>
+                                @foreach (var categoria in categorias)
+                                {
+                                    <option value="@categoria.Id">@categoria.NombreCategoria</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => producto.IdCategoria)" class="text-danger small" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="precio" class="form-label fw-bold">Precio Unitario *</label>
+                            <InputNumber id="precio" @bind-Value="producto.PrecioUnitario" class="form-control"
+                                         step="0.01" min="0" />
+                            <ValidationMessage For="@(() => producto.PrecioUnitario)" class="text-danger small" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="ganancia" class="form-label fw-bold">% Ganancia *</label>
+                            <InputNumber id="ganancia" @bind-Value="producto.GananciaPorcentaje" class="form-control"
+                                         step="0.1" min="0" max="100" />
+                            <ValidationMessage For="@(() => producto.GananciaPorcentaje)" class="text-danger small" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="stockActual" class="form-label fw-bold">Stock Actual *</label>
+                            <InputNumber id="stockActual" @bind-Value="producto.StockActual" class="form-control"
+                                         min="0" />
+                            <ValidationMessage For="@(() => producto.StockActual)" class="text-danger small" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-4">
+                            <label for="stockMinimo" class="form-label fw-bold">Stock Mínimo *</label>
+                            <InputNumber id="stockMinimo" @bind-Value="producto.StockMinimo" class="form-control"
+                                         min="0" />
+                            <ValidationMessage For="@(() => producto.StockMinimo)" class="text-danger small" />
+                            <div class="form-text">
+                                El sistema alertará cuando el stock esté por debajo de este valor.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success me-2" disabled="@cargando">
+                        <i class="fas @(cargando ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
+                        @(cargando ? "Guardando..." : "Guardar Producto")
+                    </button>
+                    <button type="button" class="btn btn-secondary me-2" @onclick="Cancelar" disabled="@cargando">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <a href="/categorias/nuevo" class="btn btn-outline-primary" target="_blank">
+                        <i class="fas fa-plus me-1"></i> Nueva Categoría
+                    </a>
+                </div>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ProductoDTO producto = new();
+    private List<CategoriaDTO> categorias = new();
+    private string Titulo => Id == 0 ? "Nuevo Producto" : "Editar Producto";
+    private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
+    private bool cargando = false;
+    private bool categoriasCargando = true;
+    private string mensajeError = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarCategorias();
+
+        if (Id > 0)
+        {
+            await CargarProducto();
+        }
+    }
+
+    private async Task CargarCategorias()
+    {
+        categoriasCargando = true;
+        var respuesta = await CategoriaService.Get();
+
+        if (!respuesta.Error)
+        {
+            categorias = respuesta.Respuesta ?? new List<CategoriaDTO>();
+        }
+        else
+        {
+            mensajeError = await respuesta.ObtenerError();
+        }
+
+        categoriasCargando = false;
+        StateHasChanged();
+    }
+
+    private async Task CargarProducto()
+    {
+        cargando = true;
+        var respuesta = await ProductoService.Get(Id);
+
+        if (!respuesta.Error && respuesta.Respuesta != null)
+        {
+            producto = respuesta.Respuesta;
+        }
+        else
+        {
+            mensajeError = await respuesta.ObtenerError();
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private async Task GuardarProducto()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        if (Id == 0)
+        {
+            var crearProducto = new CrearProductoDTO
+            {
+                Descripcion = producto.Descripcion,
+                PrecioUnitario = producto.PrecioUnitario,
+                GananciaPorcentaje = producto.GananciaPorcentaje,
+                StockActual = producto.StockActual,
+                StockMinimo = producto.StockMinimo,
+                IdCategoria = producto.IdCategoria
+            };
+
+            var respuesta = await ProductoService.Insert(crearProducto);
+            if (!respuesta.Error && respuesta.Respuesta > 0)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Producto creado exitosamente");
+                Navigation.NavigateTo("/productos");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+        else
+        {
+            var respuesta = await ProductoService.Update(Id, producto);
+            if (!respuesta.Error)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Producto actualizado exitosamente");
+                Navigation.NavigateTo("/productos");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void Cancelar() => Navigation.NavigateTo("/productos");
+}

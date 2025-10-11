@@ -1,0 +1,162 @@
+﻿@page "/proveedores/nuevo"
+@page "/proveedores/editar/{Id:int}"
+@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Entidades
+@inject IProveedorService ProveedorService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>@Titulo - GestionDespensa</PageTitle>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas @Icono me-2"></i>@Titulo</h4>
+    </div>
+    <div class="card-body">
+        <EditForm Model="proveedor" OnValidSubmit="GuardarProveedor">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="alert alert-danger" />
+
+            <div class="form-group mb-3">
+                <label for="nombre" class="form-label fw-bold">Nombre *</label>
+                <InputText id="nombre" @bind-Value="proveedor.Nombre" class="form-control"
+                           placeholder="Ingrese el nombre del proveedor" />
+                <ValidationMessage For="@(() => proveedor.Nombre)" class="text-danger small" />
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="cuit" class="form-label">CUIT</label>
+                        <InputText id="cuit" @bind-Value="proveedor.CUIT" class="form-control"
+                                   placeholder="Ingrese el CUIT" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="telefono" class="form-label">Teléfono</label>
+                        <InputText id="telefono" @bind-Value="proveedor.Telefono" class="form-control"
+                                   placeholder="Ingrese el teléfono" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText id="email" @bind-Value="proveedor.Email" class="form-control"
+                           placeholder="Ingrese el email" />
+                <ValidationMessage For="@(() => proveedor.Email)" class="text-danger small" />
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="direccion" class="form-label">Dirección</label>
+                <InputText id="direccion" @bind-Value="proveedor.Direccion" class="form-control"
+                           placeholder="Ingrese la dirección" />
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="estado" class="form-label">Estado</label>
+                        <InputSelect id="estado" @bind-Value="proveedor.Estado" class="form-control">
+                            <option value="Activo">Activo</option>
+                            <option value="Inactivo">Inactivo</option>
+                        </InputSelect>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group mb-4">
+                <label for="notas" class="form-label">Notas</label>
+                <InputTextArea id="notas" @bind-Value="proveedor.Notas" class="form-control"
+                               placeholder="Ingrese notas adicionales" rows="3" />
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-success me-2" disabled="@cargando">
+                    <i class="fas @(cargando ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
+                    @(cargando ? "Guardando..." : "Guardar Proveedor")
+                </button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancelar" disabled="@cargando">
+                    <i class="fas fa-times me-1"></i> Cancelar
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ProveedorDTO proveedor = new() { Estado = "Activo" };
+    private string Titulo => Id == 0 ? "Nuevo Proveedor" : "Editar Proveedor";
+    private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
+    private bool cargando = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id > 0)
+        {
+            cargando = true;
+            StateHasChanged();
+
+            var respuesta = await ProveedorService.Get(Id);
+            if (!respuesta.Error && respuesta.Respuesta != null)
+            {
+                proveedor = respuesta.Respuesta;
+            }
+
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GuardarProveedor()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        if (Id == 0)
+        {
+            var crearProveedor = new CrearProveedorDTO
+            {
+                Nombre = proveedor.Nombre,
+                CUIT = proveedor.CUIT,
+                Telefono = proveedor.Telefono,
+                Email = proveedor.Email,
+                Direccion = proveedor.Direccion,
+                Estado = proveedor.Estado,
+                Notas = proveedor.Notas
+            };
+
+            var respuesta = await ProveedorService.Insert(crearProveedor);
+            if (!respuesta.Error && respuesta.Respuesta > 0)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Proveedor creado exitosamente");
+                Navigation.NavigateTo("/proveedores");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+        else
+        {
+            var respuesta = await ProveedorService.Update(Id, proveedor);
+            if (!respuesta.Error)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Proveedor actualizado exitosamente");
+                Navigation.NavigateTo("/proveedores");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void Cancelar() => Navigation.NavigateTo("/proveedores");
+}

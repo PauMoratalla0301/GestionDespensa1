@@ -1,0 +1,131 @@
+﻿@page "/cajas/nuevo"
+@page "/cajas/editar/{Id:int}"
+@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Entidades
+@inject ICajaService CajaService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>@Titulo - GestionDespensa</PageTitle>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas @Icono me-2"></i>@Titulo</h4>
+    </div>
+    <div class="card-body">
+        <EditForm Model="caja" OnValidSubmit="GuardarCaja">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="alert alert-danger" />
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="usuario" class="form-label fw-bold">ID Usuario *</label>
+                        <InputText id="usuario" @bind-Value="caja.IdUsuario" class="form-control"
+                                   placeholder="Ingrese el ID del usuario" />
+                        <ValidationMessage For="@(() => caja.IdUsuario)" class="text-danger small" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="fecha" class="form-label fw-bold">Fecha *</label>
+                        <InputDate id="fecha" @bind-Value="caja.Fecha" class="form-control" />
+                        <ValidationMessage For="@(() => caja.Fecha)" class="text-danger small" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group mb-4">
+                <label for="importe" class="form-label fw-bold">Importe Inicio *</label>
+                <InputNumber id="importe" @bind-Value="caja.ImporteInicio" class="form-control"
+                             step="0.01" min="0" />
+                <ValidationMessage For="@(() => caja.ImporteInicio)" class="text-danger small" />
+                <div class="form-text">
+                    Monto inicial con el que se abre la caja.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-success me-2" disabled="@cargando">
+                    <i class="fas @(cargando ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
+                    @(cargando ? "Guardando..." : "Guardar Caja")
+                </button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancelar" disabled="@cargando">
+                    <i class="fas fa-times me-1"></i> Cancelar
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private CajaDTO caja = new() { Fecha = DateTime.Now };
+    private string Titulo => Id == 0 ? "Nueva Caja" : "Editar Caja";
+    private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
+    private bool cargando = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id > 0)
+        {
+            cargando = true;
+            StateHasChanged();
+
+            var respuesta = await CajaService.Get(Id);
+            if (!respuesta.Error && respuesta.Respuesta != null)
+            {
+                caja = respuesta.Respuesta;
+            }
+
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GuardarCaja()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        if (Id == 0)
+        {
+            var crearCaja = new CrearCajaDTO
+            {
+                IdUsuario = caja.IdUsuario,
+                Fecha = caja.Fecha,
+                ImporteInicio = caja.ImporteInicio
+            };
+
+            var respuesta = await CajaService.Insert(crearCaja);
+            if (!respuesta.Error && respuesta.Respuesta > 0)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Caja creada exitosamente");
+                Navigation.NavigateTo("/cajas");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+        else
+        {
+            var respuesta = await CajaService.Update(Id, caja);
+            if (!respuesta.Error)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Caja actualizada exitosamente");
+                Navigation.NavigateTo("/cajas");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void Cancelar() => Navigation.NavigateTo("/cajas");
+}

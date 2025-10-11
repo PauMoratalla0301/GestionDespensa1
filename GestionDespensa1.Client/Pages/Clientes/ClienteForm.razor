@@ -1,0 +1,156 @@
+﻿@page "/clientes/nuevo"
+@page "/clientes/editar/{Id:int}"
+@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Entidades
+@inject IClienteService ClienteService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>@Titulo - GestionDespensa</PageTitle>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas @Icono me-2"></i>@Titulo</h4>
+    </div>
+    <div class="card-body">
+        <EditForm Model="cliente" OnValidSubmit="GuardarCliente">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="alert alert-danger" />
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="nombre" class="form-label fw-bold">Nombre *</label>
+                        <InputText id="nombre" @bind-Value="cliente.Nombre" class="form-control"
+                                   placeholder="Ingrese el nombre" />
+                        <ValidationMessage For="@(() => cliente.Nombre)" class="text-danger small" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="apellido" class="form-label fw-bold">Apellido *</label>
+                        <InputText id="apellido" @bind-Value="cliente.Apellido" class="form-control"
+                                   placeholder="Ingrese el apellido" />
+                        <ValidationMessage For="@(() => cliente.Apellido)" class="text-danger small" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="dni" class="form-label fw-bold">DNI *</label>
+                        <InputText id="dni" @bind-Value="cliente.Dni" class="form-control"
+                                   placeholder="Ingrese el DNI" />
+                        <ValidationMessage For="@(() => cliente.Dni)" class="text-danger small" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="telefono" class="form-label">Teléfono</label>
+                        <InputText id="telefono" @bind-Value="cliente.Telefono" class="form-control"
+                                   placeholder="Ingrese el teléfono" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="direccion" class="form-label">Dirección</label>
+                <InputText id="direccion" @bind-Value="cliente.Direccion" class="form-control"
+                           placeholder="Ingrese la dirección" />
+            </div>
+
+            <div class="form-group mb-4">
+                <label for="saldo" class="form-label fw-bold">Saldo Pendiente *</label>
+                <InputNumber id="saldo" @bind-Value="cliente.SaldoPendiente" class="form-control"
+                             step="0.01" min="0" />
+                <ValidationMessage For="@(() => cliente.SaldoPendiente)" class="text-danger small" />
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-success me-2" disabled="@cargando">
+                    <i class="fas @(cargando ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
+                    @(cargando ? "Guardando..." : "Guardar Cliente")
+                </button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancelar" disabled="@cargando">
+                    <i class="fas fa-times me-1"></i> Cancelar
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ClienteDTO cliente = new();
+    private string Titulo => Id == 0 ? "Nuevo Cliente" : "Editar Cliente";
+    private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
+    private bool cargando = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id > 0)
+        {
+            cargando = true;
+            StateHasChanged();
+
+            var respuesta = await ClienteService.Get(Id);
+            if (!respuesta.Error && respuesta.Respuesta != null)
+            {
+                cliente = respuesta.Respuesta;
+            }
+
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GuardarCliente()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        if (Id == 0)
+        {
+            var crearCliente = new CrearClienteDTO
+            {
+                Nombre = cliente.Nombre,
+                Apellido = cliente.Apellido,
+                Dni = cliente.Dni,
+                Telefono = cliente.Telefono,
+                Direccion = cliente.Direccion,
+                SaldoPendiente = cliente.SaldoPendiente
+            };
+
+            var respuesta = await ClienteService.Insert(crearCliente);
+            if (!respuesta.Error && respuesta.Respuesta > 0)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Cliente creado exitosamente");
+                Navigation.NavigateTo("/clientes");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+        else
+        {
+            var respuesta = await ClienteService.Update(Id, cliente);
+            if (!respuesta.Error)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Cliente actualizado exitosamente");
+                Navigation.NavigateTo("/clientes");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void Cancelar() => Navigation.NavigateTo("/clientes");
+}

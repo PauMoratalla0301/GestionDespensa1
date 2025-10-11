@@ -1,0 +1,112 @@
+﻿@page "/categorias/nuevo"
+@page "/categorias/editar/{Id:int}"
+@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Entidades
+@inject ICategoriaService CategoriaService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>@Titulo - GestionDespensa</PageTitle>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas @Icono me-2"></i>@Titulo</h4>
+    </div>
+    <div class="card-body">
+        <EditForm Model="categoria" OnValidSubmit="GuardarCategoria">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="alert alert-danger" />
+
+            <div class="form-group mb-4">
+                <label for="nombre" class="form-label fw-bold">Nombre de Categoría *</label>
+                <InputText id="nombre" @bind-Value="categoria.NombreCategoria" class="form-control"
+                           placeholder="Ingrese el nombre de la categoría" />
+                <ValidationMessage For="@(() => categoria.NombreCategoria)" class="text-danger small" />
+                <div class="form-text">
+                    Ejemplos: "Lácteos", "Bebidas", "Limpieza", etc.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-success me-2" disabled="@cargando">
+                    <i class="fas @(cargando ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
+                    @(cargando ? "Guardando..." : "Guardar Categoría")
+                </button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancelar" disabled="@cargando">
+                    <i class="fas fa-times me-1"></i> Cancelar
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private CategoriaDTO categoria = new();
+    private string Titulo => Id == 0 ? "Nueva Categoría" : "Editar Categoría";
+    private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
+    private bool cargando = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id > 0)
+        {
+            cargando = true;
+            StateHasChanged();
+
+            var respuesta = await CategoriaService.Get(Id);
+            if (!respuesta.Error && respuesta.Respuesta != null)
+            {
+                categoria = respuesta.Respuesta;
+            }
+
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GuardarCategoria()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        if (Id == 0)
+        {
+            var crearCategoria = new CrearCategoriaDTO
+            {
+                NombreCategoria = categoria.NombreCategoria
+            };
+
+            var respuesta = await CategoriaService.Insert(crearCategoria);
+            if (!respuesta.Error && respuesta.Respuesta > 0)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Categoría creada exitosamente");
+                Navigation.NavigateTo("/categorias");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+        else
+        {
+            var respuesta = await CategoriaService.Update(Id, categoria);
+            if (!respuesta.Error)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Categoría actualizada exitosamente");
+                Navigation.NavigateTo("/categorias");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void Cancelar() => Navigation.NavigateTo("/categorias");
+}
+}

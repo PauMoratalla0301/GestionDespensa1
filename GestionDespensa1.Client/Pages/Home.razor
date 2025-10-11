@@ -1,0 +1,518 @@
+﻿@page "/"
+@inject NavigationManager Navigation
+
+<PageTitle>Despensa Raquel - Sistema de Gestión</PageTitle>
+
+<div class="welcome-container">
+    <!-- Header con logo y navegación -->
+    <div class="welcome-header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon">🥫</div>
+                <h1 class="logo-text">Despensa <span class="brand-highlight">Raquel</span></h1>
+            </div>
+            <p class="tagline">Tu aliado en la gestión de alimentos</p>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="hero-content">
+                        <h2 class="hero-title">
+                            ¡Bienvenido al Sistema de <span class="text-highlight">Despensa!</span>
+                        </h2>
+                        <p class="hero-description">
+                            Optimiza el control de tu despensa con nuestra plataforma especializada
+                            en gestión de inventario, ventas y proveedores.
+                        </p>
+
+                        <div class="hero-stats">
+                            <div class="stat-item">
+                                <div class="stat-number">📊</div>
+                                <div class="stat-text">Control Total</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">⚡</div>
+                                <div class="stat-text">Rápido y Simple</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">💰</div>
+                                <div class="stat-text">Maximiza Ganancias</div>
+                            </div>
+                        </div>
+
+                        <div class="hero-actions">
+                            <button class="btn-primary" @onclick="NavigateToProducts">
+                                🛒 Comenzar a Gestionar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="hero-visual">
+                        <div class="floating-icons">
+                            <div class="icon-item fruit">🍎</div>
+                            <div class="icon-item vegetable">🥦</div>
+                            <div class="icon-item grocery">🥫</div>
+                            <div class="icon-item dairy">🥛</div>
+                            <div class="icon-item bread">🍞</div>
+                            <div class="icon-item meat">🍗</div>
+                        </div>
+                        <div class="dashboard-preview">
+                            <div class="preview-card">
+                                <div class="preview-header">
+                                    <span class="dot red"></span>
+                                    <span class="dot yellow"></span>
+                                    <span class="dot green"></span>
+                                </div>
+                                <div class="preview-content">
+                                    <div class="preview-item">
+                                        <span>📦 Productos en stock</span>
+                                        <span class="preview-value">156</span>
+                                    </div>
+                                    <div class="preview-item">
+                                        <span>👥 Clientes registrados</span>
+                                        <span class="preview-value">89</span>
+                                    </div>
+                                    <div class="preview-item">
+                                        <span>📈 Ventas hoy</span>
+                                        <span class="preview-value">24</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features-section">
+        <div class="container">
+            <h3 class="section-title">¿Qué puedes gestionar?</h3>
+            <div class="row">
+                <div class="col-md-4 feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h4>Inventario</h4>
+                    <p>Controla stock, precios y categorías de todos tus productos alimenticios</p>
+                </div>
+                <div class="col-md-4 feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h4>Ventas</h4>
+                    <p>Registra ventas, gestiona clientes y controla pagos pendientes</p>
+                </div>
+                <div class="col-md-4 feature-card">
+                    <div class="feature-icon">🚚</div>
+                    <h4>Proveedores</h4>
+                    <p>Administra compras y relaciones con tus proveedores de alimentos</p>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-4 feature-card">
+                    <div class="feature-icon">🏪</div>
+                    <h4>Caja Diaria</h4>
+                    <p>Monitorea ingresos, egresos y el flujo de caja de tu negocio</p>
+                </div>
+                <div class="col-md-4 feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h4>Reportes</h4>
+                    <p>Genera reportes detallados de ventas, inventario y ganancias</p>
+                </div>
+                <div class="col-md-4 feature-card">
+                    <div class="feature-icon">👥</div>
+                    <h4>Clientes</h4>
+                    <p>Mantén el historial y preferencias de tus clientes frecuentes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions-section">
+        <div class="container">
+            <h3 class="section-title">Accesos Rápidos</h3>
+            <div class="quick-actions-grid">
+                <div class="quick-action" @onclick="NavigateToProducts">
+                    <div class="action-icon">📦</div>
+                    <span>Productos</span>
+                </div>
+                <div class="quick-action" @onclick="NavigateToSales">
+                    <div class="action-icon">💰</div>
+                    <span>Ventas</span>
+                </div>
+                <div class="quick-action" @onclick="NavigateToCustomers">
+                    <div class="action-icon">👥</div>
+                    <span>Clientes</span>
+                </div>
+                <div class="quick-action" @onclick="NavigateToSuppliers">
+                    <div class="action-icon">🚚</div>
+                    <span>Proveedores</span>
+                </div>
+                <div class="quick-action" @onclick="NavigateToCash">
+                    <div class="action-icon">🏪</div>
+                    <span>Caja</span>
+                </div>
+                <div class="quick-action" @onclick="NavigateToReports">
+                    <div class="action-icon">📊</div>
+                    <span>Reportes</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="welcome-footer">
+        <div class="container">
+            <p>&copy; 2024 Despensa Raquel - Sistema de Gestión. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private void NavigateToProducts() => Navigation.NavigateTo("/productos");
+    private void NavigateToSales() => Navigation.NavigateTo("/ventas");
+    private void NavigateToCustomers() => Navigation.NavigateTo("/clientes");
+    private void NavigateToSuppliers() => Navigation.NavigateTo("/proveedores");
+    private void NavigateToCash() => Navigation.NavigateTo("/cajas");
+    private void NavigateToReports() => Navigation.NavigateTo("/reportes");
+}
+
+<style>
+    /* Variables de colores para despensa */
+    :root {
+        --primary-color: #2E8B57; /* Verde bosque - relacionado con alimentos naturales */
+        --secondary-color: #FF6B35; /* Naranja cálido - frutas y energía */
+        --accent-color: #FFD166; /* Amarillo dorado - granos y cereales */
+        --background-color: #F8F9FA;
+        --text-dark: #2D3748;
+        --text-light: #718096;
+        --card-bg: #FFFFFF;
+        --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .welcome-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+
+    .welcome-header {
+        background: var(--primary-color);
+        color: white;
+        padding: 1rem 0;
+        box-shadow: var(--shadow);
+    }
+
+    .header-content {
+        text-align: center;
+    }
+
+    .logo-section {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .logo-icon {
+        font-size: 2.5rem;
+    }
+
+    .logo-text {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .brand-highlight {
+        color: var(--accent-color);
+    }
+
+    .tagline {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+
+    .hero-section {
+        padding: 4rem 0;
+        background: white;
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 1.5rem;
+        line-height: 1.2;
+    }
+
+    .text-highlight {
+        color: var(--primary-color);
+    }
+
+    .hero-description {
+        font-size: 1.2rem;
+        color: var(--text-light);
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-text {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .btn-primary {
+        background: var(--secondary-color);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow);
+    }
+
+        .btn-primary:hover {
+            background: #e55a2b;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 107, 53, 0.3);
+        }
+
+    .hero-visual {
+        position: relative;
+        height: 300px;
+    }
+
+    .floating-icons {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+    }
+
+    .icon-item {
+        position: absolute;
+        font-size: 2rem;
+        animation: floatAnimation 3s ease-in-out infinite;
+    }
+
+    .fruit {
+        top: 10%;
+        left: 10%;
+        animation-delay: 0s;
+    }
+
+    .vegetable {
+        top: 20%;
+        right: 15%;
+        animation-delay: 0.5s;
+    }
+
+    .grocery {
+        bottom: 30%;
+        left: 20%;
+        animation-delay: 1s;
+    }
+
+    .dairy {
+        top: 40%;
+        right: 25%;
+        animation-delay: 1.5s;
+    }
+
+    .bread {
+        bottom: 20%;
+        right: 15%;
+        animation-delay: 2s;
+    }
+
+    .meat {
+        bottom: 10%;
+        left: 30%;
+        animation-delay: 2.5s;
+    }
+
+    @@keyframes floatAnimation {
+        0%, 100% {
+            transform: translateY(0px);
+        }
+
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    .dashboard-preview {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .preview-card {
+        background: var(--card-bg);
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        border: 1px solid #e2e8f0;
+        min-width: 250px;
+    }
+
+    .preview-header {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    .red {
+        background: #FF6B6B;
+    }
+
+    .yellow {
+        background: #FFD166;
+    }
+
+    .green {
+        background: #06D6A0;
+    }
+
+    .preview-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+        .preview-item:last-child {
+            border-bottom: none;
+        }
+
+    .preview-value {
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .features-section {
+        padding: 4rem 0;
+        background: var(--background-color);
+    }
+
+    .section-title {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 3rem;
+    }
+
+    .feature-card {
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+
+    .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .feature-card h4 {
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    .feature-card p {
+        color: var(--text-light);
+        line-height: 1.6;
+    }
+
+    .quick-actions-section {
+        padding: 3rem 0;
+        background: white;
+    }
+
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .quick-action {
+        background: var(--card-bg);
+        border: 2px solid #e2e8f0;
+        border-radius: 15px;
+        padding: 1.5rem 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+
+        .quick-action:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+    .action-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .welcome-footer {
+        background: var(--text-dark);
+        color: white;
+        text-align: center;
+        padding: 2rem 0;
+        margin-top: 2rem;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .hero-title {
+            font-size: 2rem;
+        }
+
+        .hero-stats {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .quick-actions-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>

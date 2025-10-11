@@ -1,0 +1,245 @@
+﻿@page "/ventas/nuevo"
+@page "/ventas/editar/{Id:int}"
+@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Entidades
+@inject IVentaService VentaService
+@inject IClienteService ClienteService
+@inject IProductoService ProductoService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>@Titulo - GestionDespensa</PageTitle>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas @Icono me-2"></i>@Titulo</h4>
+    </div>
+    <div class="card-body">
+        @if (clientesCargando || productosCargando)
+        {
+            <div class="alert alert-info text-center">
+                <i class="fas fa-spinner fa-spin me-2"></i>Cargando datos...
+            </div>
+        }
+        else if (!clientes.Any())
+        {
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                No hay clientes disponibles.
+                <a href="/clientes/nuevo" class="alert-link">Crear un cliente primero</a>
+            </div>
+        }
+        else if (!productos.Any())
+        {
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                No hay productos disponibles.
+                <a href="/productos/nuevo" class="alert-link">Crear un producto primero</a>
+            </div>
+        }
+        else
+        {
+            <EditForm Model="venta" OnValidSubmit="GuardarVenta">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="alert alert-danger" />
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="cliente" class="form-label fw-bold">Cliente *</label>
+                            <InputSelect id="cliente" @bind-Value="venta.IdCliente" class="form-control">
+                                <option value="0">Seleccione un cliente</option>
+                                @foreach (var cliente in clientes)
+                                {
+                                    <option value="@cliente.Id">@cliente.Nombre @cliente.Apellido - @cliente.Dni</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => venta.IdCliente)" class="text-danger small" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="fecha" class="form-label fw-bold">Fecha Venta *</label>
+                            <InputDate id="fecha" @bind-Value="venta.FechaVenta" class="form-control" />
+                            <ValidationMessage For="@(() => venta.FechaVenta)" class="text-danger small" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="total" class="form-label fw-bold">Total *</label>
+                            <InputNumber id="total" @bind-Value="venta.Total" class="form-control"
+                                         step="0.01" min="0" />
+                            <ValidationMessage For="@(() => venta.Total)" class="text-danger small" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="pagado" class="form-label fw-bold">Monto Pagado *</label>
+                            <InputNumber id="pagado" @bind-Value="venta.MontoPagado" class="form-control"
+                                         step="0.01" min="0" />
+                            <ValidationMessage For="@(() => venta.MontoPagado)" class="text-danger small" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="saldo" class="form-label fw-bold">Saldo Pendiente *</label>
+                            <InputNumber id="saldo" @bind-Value="venta.SaldoPendiente" class="form-control"
+                                         step="0.01" min="0" />
+                            <ValidationMessage For="@(() => venta.SaldoPendiente)" class="text-danger small" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label for="estado" class="form-label fw-bold">Estado *</label>
+                    <InputSelect id="estado" @bind-Value="venta.Estado" class="form-control">
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Pagado">Pagado</option>
+                        <option value="Cancelado">Cancelado</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => venta.Estado)" class="text-danger small" />
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success me-2" disabled="@cargando">
+                        <i class="fas @(cargando ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
+                        @(cargando ? "Guardando..." : "Guardar Venta")
+                    </button>
+                    <button type="button" class="btn btn-secondary me-2" @onclick="Cancelar" disabled="@cargando">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <a href="/clientes/nuevo" class="btn btn-outline-primary" target="_blank">
+                        <i class="fas fa-plus me-1"></i> Nuevo Cliente
+                    </a>
+                </div>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private VentaDTO venta = new()
+    {
+        FechaVenta = DateTime.Now,
+        Estado = "Pendiente",
+        Total = 0,
+        MontoPagado = 0,
+        SaldoPendiente = 0
+    };
+    private List<ClienteDTO> clientes = new();
+    private List<ProductoDTO> productos = new();
+    private string Titulo => Id == 0 ? "Nueva Venta" : "Editar Venta";
+    private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
+    private bool cargando = false;
+    private bool clientesCargando = true;
+    private bool productosCargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarClientes();
+        await CargarProductos();
+
+        if (Id > 0)
+        {
+            await CargarVenta();
+        }
+    }
+
+    private async Task CargarClientes()
+    {
+        clientesCargando = true;
+        var respuesta = await ClienteService.Get();
+
+        if (!respuesta.Error)
+        {
+            clientes = respuesta.Respuesta ?? new List<ClienteDTO>();
+        }
+
+        clientesCargando = false;
+        StateHasChanged();
+    }
+
+    private async Task CargarProductos()
+    {
+        productosCargando = true;
+        var respuesta = await ProductoService.Get();
+
+        if (!respuesta.Error)
+        {
+            productos = respuesta.Respuesta ?? new List<ProductoDTO>();
+        }
+
+        productosCargando = false;
+        StateHasChanged();
+    }
+
+    private async Task CargarVenta()
+    {
+        cargando = true;
+        var respuesta = await VentaService.Get(Id);
+
+        if (!respuesta.Error && respuesta.Respuesta != null)
+        {
+            venta = respuesta.Respuesta;
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private async Task GuardarVenta()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        // Calcular saldo pendiente automáticamente
+        venta.SaldoPendiente = venta.Total - venta.MontoPagado;
+
+        if (Id == 0)
+        {
+            var crearVenta = new CrearVentaDTO
+            {
+                IdCliente = venta.IdCliente,
+                FechaVenta = venta.FechaVenta,
+                Estado = venta.Estado,
+                Total = venta.Total,
+                MontoPagado = venta.MontoPagado,
+                SaldoPendiente = venta.SaldoPendiente
+            };
+
+            var respuesta = await VentaService.Insert(crearVenta);
+            if (!respuesta.Error && respuesta.Respuesta > 0)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Venta creada exitosamente");
+                Navigation.NavigateTo("/ventas");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+        else
+        {
+            var respuesta = await VentaService.Update(Id, venta);
+            if (!respuesta.Error)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Venta actualizada exitosamente");
+                Navigation.NavigateTo("/ventas");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+            }
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void Cancelar() => Navigation.NavigateTo("/ventas");
+}

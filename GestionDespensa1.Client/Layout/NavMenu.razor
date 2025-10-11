@@ -1,0 +1,80 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Gestión Despensa</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <!-- Sección Ventas -->
+        <div class="nav-section">Ventas</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="ventas" Match="NavLinkMatch.Prefix">
+                <i class="fas fa-list me-2"></i> Lista de Ventas
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="ventas/nuevo">
+                <i class="fas fa-cash-register me-2"></i> Nueva Venta
+            </NavLink>
+        </div>
+
+        <!-- Sección Gestión -->
+        <div class="nav-section">Gestión</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="inventario">
+                <i class="fas fa-boxes me-2"></i> Inventario
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="productos">
+                <i class="fas fa-tags me-2"></i> Productos
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="categorias">
+                <i class="fas fa-folder me-2"></i> Categorías
+            </NavLink>
+        </div>
+
+        <!-- Sección Personas -->
+        <div class="nav-section">Personas</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="clientes">
+                <i class="fas fa-users me-2"></i> Clientes
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="proveedores">
+                <i class="fas fa-truck me-2"></i> Proveedores
+            </NavLink>
+        </div>
+
+        <!-- Sección Caja -->
+        <div class="nav-section">Caja</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="cajas" Match="NavLinkMatch.Prefix">
+                <i class="fas fa-cash-register me-2"></i> Registro de Cajas
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="cajas/nuevo">
+                <i class="fas fa-plus-circle me-2"></i> Nueva Caja
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}
