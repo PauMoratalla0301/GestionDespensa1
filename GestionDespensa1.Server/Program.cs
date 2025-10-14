@@ -1,7 +1,5 @@
 ﻿using GestionDespensa1.BD.Data;
 using GestionDespensa1.Server.Repositorio;
-using GestionDespensa1.BD.Data;
-using GestionDespensa1.Server.Repositorio;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
@@ -19,7 +17,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<Context>(op => op.UseSqlServer("name=conn"));
+//builder.Services.AddDbContext<Context>(op => op.UseSqlServer("name=conn"));//
+builder.Services.AddDbContext<Context>(op => op.UseSqlServer("name=conn1"));
 
 builder.Services.AddAutoMapper(typeof(Program));
 

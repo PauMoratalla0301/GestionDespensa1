@@ -56,7 +56,6 @@ namespace GestionDespensa1.Server.Controllers
             }
         }
 
-        // Endpoints de diagnóstico
         [HttpGet("test")]
         public ActionResult<string> Test()
         {
@@ -96,9 +95,8 @@ namespace GestionDespensa1.Server.Controllers
                         {
                             Id = c.Proveedor.Id,
                             Nombre = c.Proveedor.Nombre,
-                            // otras propiedades de Proveedor
                         } : null,
-                        DetallesCompra = new List<DetalleCompraProveedorDTO>() // Lista vacía por ahora
+                        DetallesCompra = new List<DetalleCompraProveedorDTO>() 
                     })
                     .ToListAsync();
 

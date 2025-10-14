@@ -56,7 +56,6 @@ namespace GestionDespensa1.Server.Controllers
             }
         }
 
-        // Endpoints de diagnóstico
         [HttpGet("test")]
         public ActionResult<string> Test()
         {

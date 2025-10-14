@@ -59,7 +59,6 @@ namespace GestionDespensa1.Server.Controllers
         {
             var resultado = await _repositorio.Existe(id);
 
-            // Manejar el ActionResult<bool> del repositorio
             if (resultado.Result is BadRequestObjectResult badRequest)
                 return BadRequest(badRequest.Value);
 
@@ -74,7 +73,6 @@ namespace GestionDespensa1.Server.Controllers
                 var cliente = _mapper.Map<Cliente>(crearClienteDTO);
                 var resultado = await _repositorio.Insert(cliente);
 
-                // Manejar el ActionResult<int> del repositorio
                 if (resultado.Result is BadRequestObjectResult badRequest)
                     return BadRequest(badRequest.Value);
 
