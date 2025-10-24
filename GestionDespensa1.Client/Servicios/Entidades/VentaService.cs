@@ -60,5 +60,10 @@ namespace GestionDespensa1.Client.Servicios.Entidades
         {
             return await _httpServicio.Delete($"api/Ventas/{id}");
         }
+
+        public Task<HttpRespuesta<ResumenVentasDTO>> GetResumenPorFecha(DateTime fecha)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

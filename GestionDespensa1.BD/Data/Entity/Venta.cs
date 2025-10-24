@@ -39,11 +39,19 @@ namespace GestionDespensa1.BD.Data.Entity
         [Precision(18, 2)]
         public decimal SaldoPendiente { get; set; }
 
+        // NUEVOS CAMPOS
+        [Required(ErrorMessage = "El método de pago es obligatorio.")]
+        [MaxLength(50, ErrorMessage = "Máximo número de caracteres {1}.")]
+        [Display(Name = "Método de Pago")]
+        public string MetodoPago { get; set; } = "Efectivo";
+
+        [MaxLength(500, ErrorMessage = "Máximo número de caracteres {1}.")]
+        [Display(Name = "Notas")]
+        public string? Notas { get; set; }
+
         // Navigation properties
         [ForeignKey("IdCliente")]
         public Cliente Cliente { get; set; }
         public List<DetalleVenta> DetallesVenta { get; set; } = new List<DetalleVenta>();
-
-
     }
 }

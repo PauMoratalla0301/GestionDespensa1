@@ -113,6 +113,33 @@ namespace GestionDespensa1.Server.Controllers
             }
         }
 
+        // ✅ NUEVO ENDPOINT DE DEBUG
+        [HttpGet("debug/categorias")]
+        public async Task<ActionResult> DebugCategorias()
+        {
+            try
+            {
+                var categorias = await _context.Categorias.ToListAsync();
+                Console.WriteLine($"🔍 Categorías disponibles: {categorias.Count}");
+
+                foreach (var cat in categorias)
+                {
+                    Console.WriteLine($"   - ID: {cat.Id}, Nombre: {cat.NombreCategoria}, Activo: {cat.Activo}");
+                }
+
+                return Ok(new
+                {
+                    total_categorias = categorias.Count,
+                    categorias = categorias.Select(c => new { c.Id, c.NombreCategoria, c.Activo })
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error en debug/categorias: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ProductoDTO>> Get(int id)
         {
@@ -225,14 +252,33 @@ namespace GestionDespensa1.Server.Controllers
             try
             {
                 Console.WriteLine($"📝 Intentando crear producto: {crearProductoDTO.Descripcion}");
+                Console.WriteLine($"📦 Datos recibidos - Descripcion: {crearProductoDTO.Descripcion}, " +
+                                $"Precio: {crearProductoDTO.PrecioUnitario}, " +
+                                $"CategoriaId: {crearProductoDTO.IdCategoria}, " +
+                                $"Stock: {crearProductoDTO.StockActual}");
+
+                // ✅ DEBUG: Verificar que la categoría existe
+                var categoriaExists = await _context.Categorias.AnyAsync(c => c.Id == crearProductoDTO.IdCategoria);
+                if (!categoriaExists)
+                {
+                    Console.WriteLine($"❌ CATEGORÍA NO EXISTE: ID {crearProductoDTO.IdCategoria}");
+
+                    // Listar categorías disponibles para debug
+                    var categoriasDisponibles = await _context.Categorias.Select(c => new { c.Id, c.NombreCategoria }).ToListAsync();
+                    Console.WriteLine($"🔍 Categorías disponibles: {string.Join(", ", categoriasDisponibles.Select(c => $"{c.Id}:{c.NombreCategoria}"))}");
+
+                    return BadRequest($"La categoría con ID {crearProductoDTO.IdCategoria} no existe. Categorías disponibles: {string.Join(", ", categoriasDisponibles.Select(c => $"{c.Id}:{c.NombreCategoria}"))}");
+                }
+
+                Console.WriteLine($"✅ Categoría {crearProductoDTO.IdCategoria} existe");
 
                 var producto = _mapper.Map<Producto>(crearProductoDTO);
                 var idCreado = await _repositorio.Insert(producto);
 
                 if (idCreado == -1)
                 {
-                    Console.WriteLine($"❌ Error al crear producto");
-                    return BadRequest("No se pudo crear el producto");
+                    Console.WriteLine($"❌ Error al crear producto en el repositorio");
+                    return BadRequest("No se pudo crear el producto en la base de datos");
                 }
 
                 Console.WriteLine($"✅ Producto creado con ID: {idCreado}");
@@ -240,8 +286,13 @@ namespace GestionDespensa1.Server.Controllers
             }
             catch (Exception err)
             {
-                Console.WriteLine($"❌ Error en POST Producto: {err.Message}");
-                return BadRequest(err.Message);
+                Console.WriteLine($"❌ ERROR EN POST Producto: {err.Message}");
+                Console.WriteLine($"📋 STACK TRACE: {err.StackTrace}");
+                if (err.InnerException != null)
+                {
+                    Console.WriteLine($"🔍 INNER EXCEPTION: {err.InnerException.Message}");
+                }
+                return BadRequest($"Error al crear producto: {err.Message}");
             }
         }
 

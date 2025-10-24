@@ -3,6 +3,7 @@
 @using GestionDespensa1.Shared.DTO
 @using GestionDespensa1.Client.Servicios.Entidades
 @inject ICajaService CajaService
+@inject IVentaService VentaService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
@@ -20,8 +21,8 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group mb-3">
-                        <label for="usuario" class="form-label fw-bold">ID Usuario *</label>
-                        <InputText id="usuario" @bind-Value="caja.IdUsuario" class="form-control"
+                        <label for="idUsuario" class="form-label fw-bold">ID Usuario *</label>
+                        <InputText id="idUsuario" @bind-Value="caja.IdUsuario" class="form-control"
                                    placeholder="Ingrese el ID del usuario" />
                         <ValidationMessage For="@(() => caja.IdUsuario)" class="text-danger small" />
                     </div>
@@ -36,8 +37,8 @@
             </div>
 
             <div class="form-group mb-4">
-                <label for="importe" class="form-label fw-bold">Importe Inicio *</label>
-                <InputNumber id="importe" @bind-Value="caja.ImporteInicio" class="form-control"
+                <label for="importeInicio" class="form-label fw-bold">Importe Inicio *</label>
+                <InputNumber id="importeInicio" @bind-Value="caja.ImporteInicio" class="form-control"
                              step="0.01" min="0" />
                 <ValidationMessage For="@(() => caja.ImporteInicio)" class="text-danger small" />
                 <div class="form-text">
@@ -45,12 +46,139 @@
                 </div>
             </div>
 
+            @if (Id > 0 && cajaCerrada)
+            {
+                <div class="card border-success mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-lock me-2"></i>Caja Cerrada</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label fw-bold">Importe Cierre</label>
+                                    <input type="number" value="@caja.ImporteCierre" class="form-control" readonly />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label fw-bold">Diferencia</label>
+                                    <input type="number" value="@diferencia" class="form-control" readonly />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label fw-bold">Estado</label>
+                                    <input type="text" value="CERRADA" class="form-control text-success fw-bold" readonly />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (Id > 0 && !cajaCerrada)
+            {
+                <!-- RESUMEN DEL DÍA -->
+                <div class="card border-info mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Resumen del Día</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (resumenCargando)
+                        {
+                            <div class="text-center">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Cargando resumen...
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 border rounded bg-light">
+                                        <h6 class="text-muted mb-1">Ventas Totales</h6>
+                                        <h4 class="text-primary mb-0">@resumenVentas.TotalVentas.ToString("C")</h4>
+                                        <small class="text-muted">@resumenVentas.CantidadVentas ventas</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 border rounded bg-light">
+                                        <h6 class="text-muted mb-1">Efectivo</h6>
+                                        <h4 class="text-success mb-0">@resumenVentas.TotalEfectivo.ToString("C")</h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 border rounded bg-light">
+                                        <h6 class="text-muted mb-1">Tarjetas</h6>
+                                        <h4 class="text-info mb-0">@resumenVentas.TotalTarjeta.ToString("C")</h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 border rounded bg-light">
+                                        <h6 class="text-muted mb-1">Transferencias</h6>
+                                        <h4 class="text-warning mb-0">@resumenVentas.TotalTransferencia.ToString("C")</h4>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 border rounded bg-warning text-dark">
+                                        <h6 class="mb-1">Importe Inicio</h6>
+                                        <h4 class="mb-0">@resumenVentas.ImporteInicio.ToString("C")</h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 border rounded bg-success text-white">
+                                        <h6 class="mb-1">Total Esperado</h6>
+                                        <h4 class="mb-0">@resumenVentas.TotalIngresos.ToString("C")</h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 border rounded @(diferencia >= 0 ? "bg-light" : "bg-danger text-white")">
+                                        <h6 class="mb-1">Diferencia</h6>
+                                        <h4 class="mb-0">@diferencia.ToString("C")</h4>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label fw-bold">Importe Cierre *</label>
+                                        <InputNumber @bind-Value="caja.ImporteCierre" class="form-control"
+                                                     step="0.01" min="0" />
+                                        <ValidationMessage For="@(() => caja.ImporteCierre)" class="text-danger small" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label fw-bold">Observaciones</label>
+                                        <InputText @bind-Value="caja.Observaciones" class="form-control"
+                                                   placeholder="Observaciones del cierre..." />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-warning mt-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Importante:</strong> Al cerrar la caja, no podrá realizar más modificaciones.
+                            </div>
+
+                            <button type="button" class="btn btn-warning" @onclick="@CerrarCaja">
+                                <i class="fas fa-lock me-1"></i> Cerrar Caja
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
             <div class="form-group">
                 <button type="submit" class="btn btn-success me-2" disabled="@cargando">
                     <i class="fas @(cargando ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
                     @(cargando ? "Guardando..." : "Guardar Caja")
                 </button>
-                <button type="button" class="btn btn-secondary" @onclick="Cancelar" disabled="@cargando">
+                <button type="button" class="btn btn-secondary" @onclick="@Cancelar" disabled="@cargando">
                     <i class="fas fa-times me-1"></i> Cancelar
                 </button>
             </div>
@@ -61,27 +189,68 @@
 @code {
     [Parameter] public int Id { get; set; }
 
-    private CajaDTO caja = new() { Fecha = DateTime.Now };
+    private CajaDTO caja = new()
+    {
+        Fecha = DateTime.Now,
+        ImporteInicio = 0,
+        Estado = "Abierta",
+        IdUsuario = ""
+    };
+
+    private ResumenVentasDTO resumenVentas = new();
+    private bool cargando = false;
+    private bool resumenCargando = false;
+    private bool cajaCerrada = false;
+
     private string Titulo => Id == 0 ? "Nueva Caja" : "Editar Caja";
     private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
-    private bool cargando = false;
 
-    protected override async Task OnParametersSetAsync()
+    private decimal diferencia => (caja.ImporteCierre ?? 0) - (caja.ImporteInicio + resumenVentas.TotalVentas);
+
+    protected override async Task OnInitializedAsync()
     {
         if (Id > 0)
         {
-            cargando = true;
-            StateHasChanged();
-
-            var respuesta = await CajaService.Get(Id);
-            if (!respuesta.Error && respuesta.Respuesta != null)
-            {
-                caja = respuesta.Respuesta;
-            }
-
-            cargando = false;
-            StateHasChanged();
+            await CargarCaja();
+            await CargarResumenVentas();
         }
+    }
+
+    private async Task CargarCaja()
+    {
+        cargando = true;
+        var respuesta = await CajaService.Get(Id);
+
+        if (!respuesta.Error && respuesta.Respuesta != null)
+        {
+            caja = respuesta.Respuesta;
+            cajaCerrada = caja.Estado == "Cerrada";
+
+            // Inicializar resumen con datos de la caja
+            resumenVentas.ImporteInicio = caja.ImporteInicio;
+            resumenVentas.ImporteCierre = caja.ImporteCierre;
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private async Task CargarResumenVentas()
+    {
+        if (Id == 0) return;
+
+        resumenCargando = true;
+        // Aquí llamarías a tu servicio para obtener el resumen de ventas del día
+        // Por ahora simulamos datos
+        resumenVentas.TotalVentas = 1500.75m;
+        resumenVentas.TotalEfectivo = 800.25m;
+        resumenVentas.TotalTarjeta = 450.50m;
+        resumenVentas.TotalTransferencia = 250.00m;
+        resumenVentas.CantidadVentas = 12;
+        resumenVentas.ImporteInicio = caja.ImporteInicio;
+
+        resumenCargando = false;
+        StateHasChanged();
     }
 
     private async Task GuardarCaja()
@@ -95,18 +264,20 @@
             {
                 IdUsuario = caja.IdUsuario,
                 Fecha = caja.Fecha,
-                ImporteInicio = caja.ImporteInicio
+                ImporteInicio = caja.ImporteInicio,
+                Estado = "Abierta",
+                Observaciones = caja.Observaciones
             };
 
             var respuesta = await CajaService.Insert(crearCaja);
             if (!respuesta.Error && respuesta.Respuesta > 0)
             {
-                await JS.InvokeVoidAsync("alert", "✅ Caja creada exitosamente");
+                await JS.InvokeVoidAsync("alert", "Caja abierta exitosamente");
                 Navigation.NavigateTo("/cajas");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+                await JS.InvokeVoidAsync("alert", $"Error: {await respuesta.ObtenerError()}");
             }
         }
         else
@@ -114,13 +285,47 @@
             var respuesta = await CajaService.Update(Id, caja);
             if (!respuesta.Error)
             {
-                await JS.InvokeVoidAsync("alert", "✅ Caja actualizada exitosamente");
+                await JS.InvokeVoidAsync("alert", "Caja actualizada exitosamente");
                 Navigation.NavigateTo("/cajas");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+                await JS.InvokeVoidAsync("alert", $"Error: {await respuesta.ObtenerError()}");
             }
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private async Task CerrarCaja()
+    {
+        if (!caja.ImporteCierre.HasValue || caja.ImporteCierre <= 0)
+        {
+            await JS.InvokeVoidAsync("alert", "Debe ingresar el importe de cierre");
+            return;
+        }
+
+        if (!await JS.InvokeAsync<bool>("confirm", "¿Está seguro de que desea cerrar la caja? Esta acción no se puede deshacer."))
+        {
+            return;
+        }
+
+        cargando = true;
+        StateHasChanged();
+
+        caja.Estado = "Cerrada";
+        var respuesta = await CajaService.Update(Id, caja);
+
+        if (!respuesta.Error)
+        {
+            await JS.InvokeVoidAsync("alert", "Caja cerrada exitosamente");
+            cajaCerrada = true;
+            StateHasChanged();
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {await respuesta.ObtenerError()}");
         }
 
         cargando = false;

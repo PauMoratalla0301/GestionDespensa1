@@ -4,7 +4,6 @@ using GestionDespensa1.BD.Data.Entity;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
-using GestionDespensa1.Server.Repositorio;
 
 namespace GestionDespensa1.Server.Repositorio
 {
@@ -15,6 +14,13 @@ namespace GestionDespensa1.Server.Repositorio
         public CajaRepositorio(Context context)
         {
             _context = context;
+        }
+
+        // ✅ MÉTODO NUEVO - Para obtener caja por ID (sin relaciones)
+        public async Task<Caja?> GetById(int id)
+        {
+            return await _context.Cajas
+                .FirstOrDefaultAsync(c => c.Id == id);
         }
 
         public async Task<List<Caja>> SelectWithRelations()
@@ -112,11 +118,5 @@ namespace GestionDespensa1.Server.Repositorio
                 return false;
             }
         }
-
-        // ELIMINA ESTOS MÉTODOS DUPLICADOS (los que tienen ActionResult<>)
-        // Task<ActionResult<bool>> Existe(int id) - ELIMINAR
-        // Task<ActionResult<int>> Insert(Caja caja) - ELIMINAR  
-        // Task<bool> ICajaRepositorio.Existe(int id) - ELIMINAR
-        // Task<int> ICajaRepositorio.Insert(Caja caja) - ELIMINAR
     }
 }

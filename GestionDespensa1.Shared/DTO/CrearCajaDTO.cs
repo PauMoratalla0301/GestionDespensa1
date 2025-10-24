@@ -17,6 +17,14 @@ namespace GestionDespensa1.Shared.DTO
         public DateTime Fecha { get; set; }
 
         [Required(ErrorMessage = "El importe de inicio es obligatorio.")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "El importe debe ser mayor a 0.")]
         public decimal ImporteInicio { get; set; }
+
+        [Required]
+        [MaxLength(20, ErrorMessage = "Máximo número de caracteres {1}.")]
+        public string Estado { get; set; } = "Abierta";
+
+        [MaxLength(500, ErrorMessage = "Máximo número de caracteres {1}.")]
+        public string? Observaciones { get; set; }
     }
 }

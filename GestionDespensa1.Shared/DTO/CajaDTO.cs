@@ -20,5 +20,15 @@ namespace GestionDespensa1.Shared.DTO
 
         [Required(ErrorMessage = "El importe de inicio es obligatorio.")]
         public decimal ImporteInicio { get; set; }
+
+        // NUEVOS CAMPOS
+        public decimal? ImporteCierre { get; set; }
+
+        [Required]
+        [MaxLength(20, ErrorMessage = "Máximo número de caracteres {1}.")]
+        public string Estado { get; set; } = "Abierta";
+
+        [MaxLength(500, ErrorMessage = "Máximo número de caracteres {1}.")]
+        public string? Observaciones { get; set; }
     }
 }

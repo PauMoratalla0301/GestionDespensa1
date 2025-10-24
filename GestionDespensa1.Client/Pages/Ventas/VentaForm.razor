@@ -29,7 +29,7 @@
                 <a href="/clientes/nuevo" class="alert-link">Crear un cliente primero</a>
             </div>
         }
-        else if (!productos.Any())
+        else if (!productosDisponibles.Any())
         {
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
@@ -66,12 +66,121 @@
                     </div>
                 </div>
 
+                <!-- SECCIÓN MEJORADA DE PRODUCTOS -->
+                <div class="form-group mb-4">
+                    <label class="form-label fw-bold">Productos *</label>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>PRODUCTO</th>
+                                        <th>CANTIDAD</th>
+                                        <th>PRECIO UNITARIO</th>
+                                        <th>SUBTOTAL</th>
+                                        <th>ACCIONES</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (!detallesVenta.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">
+                                                No hay productos añadidos. Haga clic en "Añadir producto" para comenzar.
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var detalle in detallesVenta)
+                                        {
+                                            <tr>
+                                                <td>@detalle.DescripcionProducto</td>
+                                                <td>@detalle.Cantidad</td>
+                                                <td>$@detalle.PrecioUnitario.ToString("F2")</td>
+                                                <td>$@detalle.Subtotal.ToString("F2")</td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-warning me-1"
+                                                            @onclick="@(() => EditarDetalle(detalle))">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-danger"
+                                                            @onclick="@(() => EliminarDetalle(detalle))">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+
+                            <button type="button" class="btn btn-primary" @onclick="@MostrarModalProducto">
+                                <i class="fas fa-plus me-1"></i> Añadir Producto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOTAL -->
+                <div class="row mb-4">
+                    <div class="col-md-6 offset-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body text-end">
+                                <h5 class="mb-0">
+                                    <strong>Total: $@TotalVenta.ToString("F2")</strong>
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MÉTODO DE PAGO MEJORADO -->
+                <div class="form-group mb-4">
+                    <label class="form-label fw-bold">Método de Pago *</label>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card @GetCardClass("Efectivo")"
+                                 style="cursor: pointer;" @onclick="@(() => SeleccionarMetodoPago("Efectivo"))">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                                    <h6 class="card-title">Efectivo</h6>
+                                    <p class="card-text text-muted small">Pago en efectivo</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card @GetCardClass("Tarjeta")"
+                                 style="cursor: pointer;" @onclick="@(() => SeleccionarMetodoPago("Tarjeta"))">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-credit-card fa-2x text-info mb-2"></i>
+                                    <h6 class="card-title">Tarjeta</h6>
+                                    <p class="card-text text-muted small">Crédito/Débito</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card @GetCardClass("Transferencia")"
+                                 style="cursor: pointer;" @onclick="@(() => SeleccionarMetodoPago("Transferencia"))">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-university fa-2x text-warning mb-2"></i>
+                                    <h6 class="card-title">Transferencia</h6>
+                                    <p class="card-text text-muted small">Bancaria</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <ValidationMessage For="@(() => venta.MetodoPago)" class="text-danger small" />
+                </div>
+
+                <!-- CAMPOS DE PAGO -->
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="total" class="form-label fw-bold">Total *</label>
                             <InputNumber id="total" @bind-Value="venta.Total" class="form-control"
-                                         step="0.01" min="0" />
+                                         step="0.01" min="0" readonly />
                             <ValidationMessage For="@(() => venta.Total)" class="text-danger small" />
                         </div>
                     </div>
@@ -87,7 +196,7 @@
                         <div class="form-group mb-3">
                             <label for="saldo" class="form-label fw-bold">Saldo Pendiente *</label>
                             <InputNumber id="saldo" @bind-Value="venta.SaldoPendiente" class="form-control"
-                                         step="0.01" min="0" />
+                                         step="0.01" min="0" readonly />
                             <ValidationMessage For="@(() => venta.SaldoPendiente)" class="text-danger small" />
                         </div>
                     </div>
@@ -103,12 +212,18 @@
                     <ValidationMessage For="@(() => venta.Estado)" class="text-danger small" />
                 </div>
 
+                <div class="form-group mb-3">
+                    <label for="notas" class="form-label fw-bold">Notas</label>
+                    <textarea id="notas" @bind="venta.Notas" class="form-control" rows="3"
+                              placeholder="Información adicional sobre esta venta..."></textarea>
+                </div>
+
                 <div class="form-group">
                     <button type="submit" class="btn btn-success me-2" disabled="@cargando">
                         <i class="fas @(cargando ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
                         @(cargando ? "Guardando..." : "Guardar Venta")
                     </button>
-                    <button type="button" class="btn btn-secondary me-2" @onclick="Cancelar" disabled="@cargando">
+                    <button type="button" class="btn btn-secondary me-2" @onclick="@Cancelar" disabled="@cargando">
                         <i class="fas fa-times me-1"></i> Cancelar
                     </button>
                     <a href="/clientes/nuevo" class="btn btn-outline-primary" target="_blank">
@@ -120,6 +235,72 @@
     </div>
 </div>
 
+<!-- Modal para Añadir/Editar Producto -->
+@if (mostrarModalProducto)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(detalleEditando ? "Editar Producto" : "Añadir Producto")</h5>
+                    <button type="button" class="btn-close" @onclick="@CerrarModalProducto"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Producto *</label>
+                        <select @bind="detalleSeleccionado.IdProducto" @bind:event="onchange" class="form-control">
+                            <option value="0">Seleccione un producto</option>
+                            @foreach (var producto in productosDisponibles)
+                            {
+                                <option value="@producto.Id">@producto.Descripcion - Stock: @producto.StockActual - $@producto.PrecioUnitario.ToString("F2")</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Cantidad *</label>
+                                <input type="number" @bind="detalleSeleccionado.Cantidad" @bind:event="oninput"
+                                       min="1" class="form-control" />
+                                @if (detalleSeleccionado.IdProducto > 0)
+                                {
+                                    var producto = productosDisponibles.FirstOrDefault(p => p.Id == detalleSeleccionado.IdProducto);
+                                    if (producto != null)
+                                    {
+                                        <small class="text-muted">Stock disponible: @producto.StockActual</small>
+                                        @if (detalleSeleccionado.Cantidad > producto.StockActual)
+                                        {
+                                            <small class="text-danger d-block">¡Stock insuficiente!</small>
+                                        }
+                                    }
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Precio Unitario *</label>
+                                <input type="number" @bind="detalleSeleccionado.PrecioUnitario" @bind:event="oninput"
+                                       step="0.01" min="0" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>Subtotal: $@detalleSeleccionado.Subtotal.ToString("F2")</strong>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="@CerrarModalProducto">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="@AgregarDetalle" disabled="@(!PuedeAgregarProducto)">
+                        @(detalleEditando ? "Actualizar" : "Añadir") Producto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public int Id { get; set; }
 
@@ -129,15 +310,36 @@
         Estado = "Pendiente",
         Total = 0,
         MontoPagado = 0,
-        SaldoPendiente = 0
+        SaldoPendiente = 0,
+        MetodoPago = "Efectivo",
+        Notas = "",
+        IdCliente = 0
     };
+
+    // Listas para datos
     private List<ClienteDTO> clientes = new();
-    private List<ProductoDTO> productos = new();
-    private string Titulo => Id == 0 ? "Nueva Venta" : "Editar Venta";
-    private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
+    private List<ProductoDTO> productosDisponibles = new();
+    private List<DetalleVentaDTO> detallesVenta = new();
+
+    // Variables para el modal de productos
+    private bool mostrarModalProducto = false;
+    private bool detalleEditando = false;
+    private DetalleVentaDTO detalleSeleccionado = new();
+    private DetalleVentaDTO? detalleOriginal = null;
+
+    // Estados de carga
     private bool cargando = false;
     private bool clientesCargando = true;
     private bool productosCargando = true;
+
+    // Propiedades computadas
+    private string Titulo => Id == 0 ? "Nueva Venta" : "Editar Venta";
+    private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
+    private decimal TotalVenta => detallesVenta.Sum(p => p.Subtotal);
+    private bool PuedeAgregarProducto => detalleSeleccionado.IdProducto > 0 &&
+                                        detalleSeleccionado.Cantidad > 0 &&
+                                        detalleSeleccionado.PrecioUnitario > 0 &&
+                                        TieneStockSuficiente();
 
     protected override async Task OnInitializedAsync()
     {
@@ -171,7 +373,7 @@
 
         if (!respuesta.Error)
         {
-            productos = respuesta.Respuesta ?? new List<ProductoDTO>();
+            productosDisponibles = respuesta.Respuesta ?? new List<ProductoDTO>();
         }
 
         productosCargando = false;
@@ -186,9 +388,150 @@
         if (!respuesta.Error && respuesta.Respuesta != null)
         {
             venta = respuesta.Respuesta;
+            // Cargar detalles de venta existentes
+            detallesVenta = venta.DetallesVenta ?? new List<DetalleVentaDTO>();
+            ActualizarTotales();
         }
 
         cargando = false;
+        StateHasChanged();
+    }
+
+    private void MostrarModalProducto()
+    {
+        detalleEditando = false;
+        detalleSeleccionado = new DetalleVentaDTO { Cantidad = 1, PrecioUnitario = 0 };
+        mostrarModalProducto = true;
+        StateHasChanged();
+    }
+
+    private void CerrarModalProducto()
+    {
+        mostrarModalProducto = false;
+        detalleEditando = false;
+        detalleOriginal = null;
+        StateHasChanged();
+    }
+
+    private string GetCardClass(string metodo)
+    {
+        return venta.MetodoPago == metodo ? "border-primary bg-light" : "";
+    }
+
+    private void ActualizarPrecioProducto()
+    {
+        if (detalleSeleccionado.IdProducto > 0)
+        {
+            var producto = productosDisponibles.FirstOrDefault(p => p.Id == detalleSeleccionado.IdProducto);
+            if (producto != null)
+            {
+                detalleSeleccionado.PrecioUnitario = producto.PrecioUnitario;
+                detalleSeleccionado.DescripcionProducto = producto.Descripcion;
+                detalleSeleccionado.StockActual = producto.StockActual;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private bool TieneStockSuficiente()
+    {
+        if (detalleSeleccionado.IdProducto == 0) return true;
+
+        var producto = productosDisponibles.FirstOrDefault(p => p.Id == detalleSeleccionado.IdProducto);
+        return producto != null && detalleSeleccionado.Cantidad <= producto.StockActual;
+    }
+
+    private void AgregarDetalle()
+    {
+        if (detalleSeleccionado.IdProducto == 0)
+        {
+            JS.InvokeVoidAsync("alert", "Seleccione un producto");
+            return;
+        }
+
+        if (detalleSeleccionado.Cantidad <= 0 || detalleSeleccionado.PrecioUnitario <= 0)
+        {
+            JS.InvokeVoidAsync("alert", "Cantidad y precio unitario deben ser mayores a 0");
+            return;
+        }
+
+        // Validar stock
+        if (!TieneStockSuficiente())
+        {
+            var producto = productosDisponibles.FirstOrDefault(p => p.Id == detalleSeleccionado.IdProducto);
+            if (producto != null)
+            {
+                JS.InvokeVoidAsync("alert", $"Stock insuficiente. Stock disponible: {producto.StockActual}");
+            }
+            return;
+        }
+
+        if (detalleEditando && detalleOriginal != null)
+        {
+            // Reemplazar detalle existente
+            var index = detallesVenta.IndexOf(detalleOriginal);
+            if (index >= 0)
+            {
+                detallesVenta[index] = new DetalleVentaDTO
+                {
+                    IdProducto = detalleSeleccionado.IdProducto,
+                    DescripcionProducto = detalleSeleccionado.DescripcionProducto,
+                    Cantidad = detalleSeleccionado.Cantidad,
+                    PrecioUnitario = detalleSeleccionado.PrecioUnitario,
+                    StockActual = detalleSeleccionado.StockActual
+                };
+            }
+        }
+        else
+        {
+            // Agregar nuevo detalle
+            detallesVenta.Add(new DetalleVentaDTO
+            {
+                IdProducto = detalleSeleccionado.IdProducto,
+                DescripcionProducto = detalleSeleccionado.DescripcionProducto,
+                Cantidad = detalleSeleccionado.Cantidad,
+                PrecioUnitario = detalleSeleccionado.PrecioUnitario,
+                StockActual = detalleSeleccionado.StockActual
+            });
+        }
+
+        ActualizarTotales();
+        CerrarModalProducto();
+    }
+
+    private void EditarDetalle(DetalleVentaDTO detalle)
+    {
+        detalleEditando = true;
+        detalleOriginal = detalle;
+        detalleSeleccionado = new DetalleVentaDTO
+        {
+            IdProducto = detalle.IdProducto,
+            DescripcionProducto = detalle.DescripcionProducto,
+            Cantidad = detalle.Cantidad,
+            PrecioUnitario = detalle.PrecioUnitario,
+            StockActual = detalle.StockActual
+        };
+        mostrarModalProducto = true;
+        StateHasChanged();
+    }
+
+    private void EliminarDetalle(DetalleVentaDTO detalle)
+    {
+        detallesVenta.Remove(detalle);
+        ActualizarTotales();
+        StateHasChanged();
+    }
+
+    private void SeleccionarMetodoPago(string metodo)
+    {
+        venta.MetodoPago = metodo;
+        StateHasChanged();
+    }
+
+    private void ActualizarTotales()
+    {
+        venta.Total = TotalVenta;
+        venta.SaldoPendiente = venta.Total - venta.MontoPagado;
         StateHasChanged();
     }
 
@@ -196,6 +539,31 @@
     {
         cargando = true;
         StateHasChanged();
+
+        // Validaciones
+        if (!detallesVenta.Any())
+        {
+            await JS.InvokeVoidAsync("alert", "Debe añadir al menos un producto a la venta.");
+            cargando = false;
+            StateHasChanged();
+            return;
+        }
+
+        if (string.IsNullOrEmpty(venta.MetodoPago))
+        {
+            await JS.InvokeVoidAsync("alert", "Debe seleccionar un método de pago.");
+            cargando = false;
+            StateHasChanged();
+            return;
+        }
+
+        if (venta.IdCliente == 0)
+        {
+            await JS.InvokeVoidAsync("alert", "Debe seleccionar un cliente.");
+            cargando = false;
+            StateHasChanged();
+            return;
+        }
 
         // Calcular saldo pendiente automáticamente
         venta.SaldoPendiente = venta.Total - venta.MontoPagado;
@@ -209,31 +577,35 @@
                 Estado = venta.Estado,
                 Total = venta.Total,
                 MontoPagado = venta.MontoPagado,
-                SaldoPendiente = venta.SaldoPendiente
+                SaldoPendiente = venta.SaldoPendiente,
+                MetodoPago = venta.MetodoPago,
+                Notas = venta.Notas,
+                DetallesVenta = detallesVenta
             };
 
             var respuesta = await VentaService.Insert(crearVenta);
             if (!respuesta.Error && respuesta.Respuesta > 0)
             {
-                await JS.InvokeVoidAsync("alert", "✅ Venta creada exitosamente");
+                await JS.InvokeVoidAsync("alert", "Venta creada exitosamente");
                 Navigation.NavigateTo("/ventas");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+                await JS.InvokeVoidAsync("alert", $"Error: {await respuesta.ObtenerError()}");
             }
         }
         else
         {
+            venta.DetallesVenta = detallesVenta;
             var respuesta = await VentaService.Update(Id, venta);
             if (!respuesta.Error)
             {
-                await JS.InvokeVoidAsync("alert", "✅ Venta actualizada exitosamente");
+                await JS.InvokeVoidAsync("alert", "Venta actualizada exitosamente");
                 Navigation.NavigateTo("/ventas");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+                await JS.InvokeVoidAsync("alert", $"Error: {await respuesta.ObtenerError()}");
             }
         }
 

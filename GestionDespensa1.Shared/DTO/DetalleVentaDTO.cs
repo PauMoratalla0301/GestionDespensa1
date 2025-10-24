@@ -18,9 +18,18 @@ namespace GestionDespensa1.Shared.DTO
         public int IdProducto { get; set; }
 
         [Required(ErrorMessage = "La cantidad es obligatoria.")]
+        [Range(1, int.MaxValue, ErrorMessage = "La cantidad debe ser mayor a 0.")]
         public int Cantidad { get; set; }
 
         [Required(ErrorMessage = "El precio unitario es obligatorio.")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "El precio unitario debe ser mayor a 0.")]
         public decimal PrecioUnitario { get; set; }
+
+        // Campo calculado
+        public decimal Subtotal => Cantidad * PrecioUnitario;
+
+        // Información del producto (para mostrar)
+        public string? DescripcionProducto { get; set; }
+        public int StockActual { get; set; }
     }
 }

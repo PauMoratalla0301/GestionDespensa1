@@ -10,13 +10,13 @@ namespace GestionDespensa1.Server.Controllers
 {
     [ApiController]
     [Route("api/Cajas")]
-    public class CajasControllers : ControllerBase
+    public class CajasController : ControllerBase  // ← Nombre corregido
     {
         private readonly ICajaRepositorio _repositorio;
         private readonly IMapper _mapper;
         private readonly Context _context;
 
-        public CajasControllers(ICajaRepositorio repositorio, IMapper mapper, Context context)
+        public CajasController(ICajaRepositorio repositorio, IMapper mapper, Context context)  // ← Nombre corregido
         {
             _repositorio = repositorio;
             _mapper = mapper;
@@ -56,7 +56,32 @@ namespace GestionDespensa1.Server.Controllers
             }
         }
 
-        
+        // ✅ MÉTODO NUEVO - Para obtener caja por ID
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<CajaDTO>> Get(int id)
+        {
+            try
+            {
+                Console.WriteLine($"🔍 Buscando caja con ID: {id}");
+
+                var caja = await _repositorio.GetById(id);
+                if (caja == null)
+                {
+                    Console.WriteLine($"❌ Caja {id} no encontrada");
+                    return NotFound();
+                }
+
+                var cajaDTO = _mapper.Map<CajaDTO>(caja);
+                Console.WriteLine($"✅ Caja {id} encontrada");
+                return Ok(cajaDTO);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error en GET Caja {id}: {ex.Message}");
+                return StatusCode(500, $"Error al cargar caja: {ex.Message}");
+            }
+        }
+
         [HttpGet("test")]
         public ActionResult<string> Test()
         {
@@ -91,7 +116,6 @@ namespace GestionDespensa1.Server.Controllers
                         IdUsuario = c.IdUsuario,
                         Fecha = c.Fecha,
                         ImporteInicio = c.ImporteInicio
-                       
                     })
                     .ToListAsync();
 
