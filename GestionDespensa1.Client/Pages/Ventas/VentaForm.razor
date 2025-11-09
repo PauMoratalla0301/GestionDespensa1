@@ -12,27 +12,19 @@
 
 <div class="card">
     <div class="card-header bg-primary text-white">
-        <h4 class="mb-0"><i class="fas @Icono me-2"></i>@Titulo</h4>
+        <h4 class="mb-0"><i class="bi @Icono me-2"></i>@Titulo</h4>
     </div>
     <div class="card-body">
         @if (clientesCargando || productosCargando)
         {
             <div class="alert alert-info text-center">
-                <i class="fas fa-spinner fa-spin me-2"></i>Cargando datos...
-            </div>
-        }
-        else if (!clientes.Any())
-        {
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                No hay clientes disponibles.
-                <a href="/clientes/nuevo" class="alert-link">Crear un cliente primero</a>
+                <i class="bi bi-arrow-repeat spinner me-2"></i>Cargando datos...
             </div>
         }
         else if (!productosDisponibles.Any())
         {
             <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
+                <i class="bi bi-exclamation-triangle me-2"></i>
                 No hay productos disponibles.
                 <a href="/productos/nuevo" class="alert-link">Crear un producto primero</a>
             </div>
@@ -46,15 +38,17 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label for="cliente" class="form-label fw-bold">Cliente *</label>
+                            <label for="cliente" class="form-label fw-bold">Cliente</label>
                             <InputSelect id="cliente" @bind-Value="venta.IdCliente" class="form-control">
-                                <option value="0">Seleccione un cliente</option>
+                                <option value="0">Cliente ocasional (Sin datos)</option>
                                 @foreach (var cliente in clientes)
                                 {
                                     <option value="@cliente.Id">@cliente.Nombre @cliente.Apellido - @cliente.Dni</option>
                                 }
                             </InputSelect>
-                            <ValidationMessage For="@(() => venta.IdCliente)" class="text-danger small" />
+                            <div class="form-text text-muted">
+                                Seleccione "Cliente ocasional" para ventas sin datos del cliente
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -66,7 +60,7 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN MEJORADA DE PRODUCTOS -->
+                <!-- SECCIÓN DE PRODUCTOS -->
                 <div class="form-group mb-4">
                     <label class="form-label fw-bold">Productos *</label>
 
@@ -103,11 +97,11 @@
                                                 <td>
                                                     <button type="button" class="btn btn-sm btn-warning me-1"
                                                             @onclick="@(() => EditarDetalle(detalle))">
-                                                        <i class="fas fa-edit"></i>
+                                                        <i class="bi bi-pencil"></i>
                                                     </button>
                                                     <button type="button" class="btn btn-sm btn-danger"
                                                             @onclick="@(() => EliminarDetalle(detalle))">
-                                                        <i class="fas fa-trash"></i>
+                                                        <i class="bi bi-trash"></i>
                                                     </button>
                                                 </td>
                                             </tr>
@@ -117,91 +111,123 @@
                             </table>
 
                             <button type="button" class="btn btn-primary" @onclick="@MostrarModalProducto">
-                                <i class="fas fa-plus me-1"></i> Añadir Producto
+                                <i class="bi bi-plus me-1"></i> Añadir Producto
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- TOTAL -->
+                <!-- RESUMEN DE TOTALES -->
                 <div class="row mb-4">
                     <div class="col-md-6 offset-md-6">
                         <div class="card bg-light">
                             <div class="card-body text-end">
                                 <h5 class="mb-0">
-                                    <strong>Total: $@TotalVenta.ToString("F2")</strong>
+                                    <strong>Total a Pagar: $@TotalVenta.ToString("F2")</strong>
                                 </h5>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- MÉTODO DE PAGO MEJORADO -->
+                <!-- SISTEMA DE PAGO MEJORADO -->
                 <div class="form-group mb-4">
-                    <label class="form-label fw-bold">Método de Pago *</label>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card @GetCardClass("Efectivo")"
-                                 style="cursor: pointer;" @onclick="@(() => SeleccionarMetodoPago("Efectivo"))">
-                                <div class="card-body text-center">
-                                    <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
-                                    <h6 class="card-title">Efectivo</h6>
-                                    <p class="card-text text-muted small">Pago en efectivo</p>
+                    <label class="form-label fw-bold">Métodos de Pago</label>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <!-- EFECTIVO -->
+                            <div class="row align-items-center mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Efectivo:</label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="number" @bind="pagoEfectivo" @bind:event="oninput"
+                                           class="form-control" placeholder="0.00" step="0.01" min="0"
+                                           @onchange="@(() => ActualizarPagos())" />
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="badge bg-success fs-6">$@pagoEfectivo.ToString("F2")</span>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card @GetCardClass("Tarjeta")"
-                                 style="cursor: pointer;" @onclick="@(() => SeleccionarMetodoPago("Tarjeta"))">
-                                <div class="card-body text-center">
-                                    <i class="fas fa-credit-card fa-2x text-info mb-2"></i>
-                                    <h6 class="card-title">Tarjeta</h6>
-                                    <p class="card-text text-muted small">Crédito/Débito</p>
+
+                            <!-- TRANSFERENCIA -->
+                            <div class="row align-items-center mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Transferencia:</label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="number" @bind="pagoTransferencia" @bind:event="oninput"
+                                           class="form-control" placeholder="0.00" step="0.01" min="0"
+                                           @onchange="@(() => ActualizarPagos())" />
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="badge bg-warning fs-6">$@pagoTransferencia.ToString("F2")</span>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card @GetCardClass("Transferencia")"
-                                 style="cursor: pointer;" @onclick="@(() => SeleccionarMetodoPago("Transferencia"))">
-                                <div class="card-body text-center">
-                                    <i class="fas fa-university fa-2x text-warning mb-2"></i>
-                                    <h6 class="card-title">Transferencia</h6>
-                                    <p class="card-text text-muted small">Bancaria</p>
+
+                            <!-- TARJETA -->
+                            <div class="row align-items-center mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Débito / Crédito:</label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="number" @bind="pagoTarjeta" @bind:event="oninput"
+                                           class="form-control" placeholder="0.00" step="0.01" min="0"
+                                           @onchange="@(() => ActualizarPagos())" />
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="badge bg-info fs-6">$@pagoTarjeta.ToString("F2")</span>
                                 </div>
                             </div>
+
+                            <!-- LÍNEA DIVISORIA -->
+                            <hr />
+
+                            <!-- RESUMEN DE PAGOS -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="alert alert-success">
+                                        <h6 class="mb-1">Total Pagado:</h6>
+                                        <h4 class="mb-0">$@TotalPagado.ToString("F2")</h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="alert @(SaldoPendiente > 0 ? "alert-warning" : "alert-success")">
+                                        <h6 class="mb-1">Saldo Pendiente:</h6>
+                                        <h4 class="mb-0">$@SaldoPendiente.ToString("F2")</h4>
+                                        @if (SaldoPendiente == 0 && TotalVenta > 0)
+                                        {
+                                            <small class="text-success">✅ Pago completo</small>
+                                        }
+                                        else if (SaldoPendiente > 0)
+                                        {
+                                            <small class="text-warning">⏳ Pago pendiente</small>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- BOTÓN PARA PAGAR TODO -->
+                            @if (SaldoPendiente > 0)
+                            {
+                                <div class="text-center mt-3">
+                                    <button type="button" class="btn btn-success" @onclick="PagarTodo">
+                                        <i class="bi bi-credit-card me-1"></i> Pagar Todo ($@SaldoPendiente.ToString("F2"))
+                                    </button>
+                                </div>
+                            }
                         </div>
                     </div>
-                    <ValidationMessage For="@(() => venta.MetodoPago)" class="text-danger small" />
                 </div>
 
-                <!-- CAMPOS DE PAGO -->
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="total" class="form-label fw-bold">Total *</label>
-                            <InputNumber id="total" @bind-Value="venta.Total" class="form-control"
-                                         step="0.01" min="0" readonly />
-                            <ValidationMessage For="@(() => venta.Total)" class="text-danger small" />
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="pagado" class="form-label fw-bold">Monto Pagado *</label>
-                            <InputNumber id="pagado" @bind-Value="venta.MontoPagado" class="form-control"
-                                         step="0.01" min="0" />
-                            <ValidationMessage For="@(() => venta.MontoPagado)" class="text-danger small" />
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="saldo" class="form-label fw-bold">Saldo Pendiente *</label>
-                            <InputNumber id="saldo" @bind-Value="venta.SaldoPendiente" class="form-control"
-                                         step="0.01" min="0" readonly />
-                            <ValidationMessage For="@(() => venta.SaldoPendiente)" class="text-danger small" />
-                        </div>
-                    </div>
-                </div>
+                <!-- CAMPOS OCULTOS PARA LA VENTA -->
+                <input type="hidden" @bind="venta.Total" />
+                <input type="hidden" @bind="venta.MontoPagado" />
+                <input type="hidden" @bind="venta.SaldoPendiente" />
+                <input type="hidden" @bind="venta.MetodoPago" />
 
+                <!-- ESTADO DE LA VENTA -->
                 <div class="form-group mb-4">
                     <label for="estado" class="form-label fw-bold">Estado *</label>
                     <InputSelect id="estado" @bind-Value="venta.Estado" class="form-control">
@@ -220,14 +246,14 @@
 
                 <div class="form-group">
                     <button type="submit" class="btn btn-success me-2" disabled="@cargando">
-                        <i class="fas @(cargando ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
+                        <i class="bi @(cargando ? "bi-arrow-repeat spinner" : "bi-save") me-1"></i>
                         @(cargando ? "Guardando..." : "Guardar Venta")
                     </button>
                     <button type="button" class="btn btn-secondary me-2" @onclick="@Cancelar" disabled="@cargando">
-                        <i class="fas fa-times me-1"></i> Cancelar
+                        <i class="bi bi-x me-1"></i> Cancelar
                     </button>
                     <a href="/clientes/nuevo" class="btn btn-outline-primary" target="_blank">
-                        <i class="fas fa-plus me-1"></i> Nuevo Cliente
+                        <i class="bi bi-plus me-1"></i> Nuevo Cliente
                     </a>
                 </div>
             </EditForm>
@@ -301,6 +327,22 @@
     </div>
 }
 
+<style>
+    .spinner {
+        animation: spin 1s linear infinite;
+    }
+
+    @@keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
 @code {
     [Parameter] public int Id { get; set; }
 
@@ -311,10 +353,15 @@
         Total = 0,
         MontoPagado = 0,
         SaldoPendiente = 0,
-        MetodoPago = "Efectivo",
+        MetodoPago = "Mixto",
         Notas = "",
-        IdCliente = 0
+        IdCliente = 0  // 0 significa cliente ocasional
     };
+
+    // Variables para métodos de pago
+    private decimal pagoEfectivo = 0;
+    private decimal pagoTransferencia = 0;
+    private decimal pagoTarjeta = 0;
 
     // Listas para datos
     private List<ClienteDTO> clientes = new();
@@ -334,8 +381,10 @@
 
     // Propiedades computadas
     private string Titulo => Id == 0 ? "Nueva Venta" : "Editar Venta";
-    private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
+    private string Icono => Id == 0 ? "bi-plus" : "bi-pencil";
     private decimal TotalVenta => detallesVenta.Sum(p => p.Subtotal);
+    private decimal TotalPagado => pagoEfectivo + pagoTransferencia + pagoTarjeta;
+    private decimal SaldoPendiente => TotalVenta - TotalPagado;
     private bool PuedeAgregarProducto => detalleSeleccionado.IdProducto > 0 &&
                                         detalleSeleccionado.Cantidad > 0 &&
                                         detalleSeleccionado.PrecioUnitario > 0 &&
@@ -413,9 +462,66 @@
         StateHasChanged();
     }
 
-    private string GetCardClass(string metodo)
+    private void ActualizarPagos()
     {
-        return venta.MetodoPago == metodo ? "border-primary bg-light" : "";
+        // Actualizar los campos de la venta
+        venta.Total = TotalVenta;
+        venta.MontoPagado = TotalPagado;
+        venta.SaldoPendiente = SaldoPendiente;
+
+        // Determinar método de pago
+        var metodos = new List<string>();
+        if (pagoEfectivo > 0) metodos.Add("Efectivo");
+        if (pagoTransferencia > 0) metodos.Add("Transferencia");
+        if (pagoTarjeta > 0) metodos.Add("Tarjeta");
+
+        venta.MetodoPago = metodos.Count switch
+        {
+            0 => "No especificado",
+            1 => metodos[0],
+            _ => "Mixto"
+        };
+
+        // Actualizar estado si está pagado completamente
+        if (SaldoPendiente <= 0 && TotalVenta > 0)
+        {
+            venta.Estado = "Pagado";
+        }
+        else if (TotalPagado > 0)
+        {
+            venta.Estado = "Parcial";
+        }
+        else
+        {
+            venta.Estado = "Pendiente";
+        }
+
+        StateHasChanged();
+    }
+
+    private void PagarTodo()
+    {
+        var saldoRestante = SaldoPendiente;
+
+        // Distribuir el saldo pendiente entre los métodos de pago
+        if (pagoEfectivo == 0 && pagoTransferencia == 0 && pagoTarjeta == 0)
+        {
+            // Si no hay pagos, poner todo en efectivo
+            pagoEfectivo = saldoRestante;
+        }
+        else
+        {
+            // Distribuir proporcionalmente entre los métodos ya usados
+            var totalActual = TotalPagado;
+            if (totalActual > 0)
+            {
+                if (pagoEfectivo > 0) pagoEfectivo += (pagoEfectivo / totalActual) * saldoRestante;
+                if (pagoTransferencia > 0) pagoTransferencia += (pagoTransferencia / totalActual) * saldoRestante;
+                if (pagoTarjeta > 0) pagoTarjeta += (pagoTarjeta / totalActual) * saldoRestante;
+            }
+        }
+
+        ActualizarPagos();
     }
 
     private void ActualizarPrecioProducto()
@@ -522,17 +628,10 @@
         StateHasChanged();
     }
 
-    private void SeleccionarMetodoPago(string metodo)
-    {
-        venta.MetodoPago = metodo;
-        StateHasChanged();
-    }
-
     private void ActualizarTotales()
     {
         venta.Total = TotalVenta;
-        venta.SaldoPendiente = venta.Total - venta.MontoPagado;
-        StateHasChanged();
+        ActualizarPagos(); // Esto actualizará MontoPagado y SaldoPendiente automáticamente
     }
 
     private async Task GuardarVenta()
@@ -540,7 +639,7 @@
         cargando = true;
         StateHasChanged();
 
-        // Validaciones
+        // Validaciones - ELIMINAMOS la validación de cliente obligatorio
         if (!detallesVenta.Any())
         {
             await JS.InvokeVoidAsync("alert", "Debe añadir al menos un producto a la venta.");
@@ -549,30 +648,29 @@
             return;
         }
 
-        if (string.IsNullOrEmpty(venta.MetodoPago))
-        {
-            await JS.InvokeVoidAsync("alert", "Debe seleccionar un método de pago.");
-            cargando = false;
-            StateHasChanged();
-            return;
-        }
-
+        // Si no hay cliente seleccionado (IdCliente = 0), se guarda como cliente ocasional
         if (venta.IdCliente == 0)
         {
-            await JS.InvokeVoidAsync("alert", "Debe seleccionar un cliente.");
-            cargando = false;
-            StateHasChanged();
-            return;
+            // Opcional: agregar una nota indicando que es cliente ocasional
+            if (string.IsNullOrEmpty(venta.Notas))
+            {
+                venta.Notas = "Cliente ocasional";
+            }
+            else if (!venta.Notas.Contains("Cliente ocasional"))
+            {
+                venta.Notas += " | Cliente ocasional";
+            }
         }
 
-        // Calcular saldo pendiente automáticamente
-        venta.SaldoPendiente = venta.Total - venta.MontoPagado;
+        // Preparar detalles de pago para guardar en notas
+        var detallesPago = $"PAGOS: Efectivo: ${pagoEfectivo:F2} | Transferencia: ${pagoTransferencia:F2} | Tarjeta: ${pagoTarjeta:F2}";
+        venta.Notas = string.IsNullOrEmpty(venta.Notas) ? detallesPago : $"{venta.Notas}\n{detallesPago}";
 
         if (Id == 0)
         {
             var crearVenta = new CrearVentaDTO
             {
-                IdCliente = venta.IdCliente,
+                IdCliente = venta.IdCliente, // Puede ser 0 (cliente ocasional)
                 FechaVenta = venta.FechaVenta,
                 Estado = venta.Estado,
                 Total = venta.Total,
@@ -586,12 +684,12 @@
             var respuesta = await VentaService.Insert(crearVenta);
             if (!respuesta.Error && respuesta.Respuesta > 0)
             {
-                await JS.InvokeVoidAsync("alert", "Venta creada exitosamente");
+                await JS.InvokeVoidAsync("alert", "✅ Venta creada exitosamente");
                 Navigation.NavigateTo("/ventas");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"Error: {await respuesta.ObtenerError()}");
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
             }
         }
         else
@@ -600,12 +698,12 @@
             var respuesta = await VentaService.Update(Id, venta);
             if (!respuesta.Error)
             {
-                await JS.InvokeVoidAsync("alert", "Venta actualizada exitosamente");
+                await JS.InvokeVoidAsync("alert", "✅ Venta actualizada exitosamente");
                 Navigation.NavigateTo("/ventas");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"Error: {await respuesta.ObtenerError()}");
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
             }
         }
 

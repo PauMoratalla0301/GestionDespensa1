@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Servicios
+// ✅ CONFIGURACIÓN BÁSICA DE SERVICIOS
 builder.Services.AddControllers().AddJsonOptions(
     x => x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 
@@ -14,13 +14,32 @@ builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// ✅ CONEXIÓN SIMPLIFICADA - Siempre usa Somee en el servidor
-builder.Services.AddDbContext<Context>(op =>
-    op.UseSqlServer(builder.Configuration.GetConnectionString("conn2")));
+// ✅ CONFIGURACIÓN DE BD - VERSIÓN SIMPLIFICADA
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-builder.Services.AddAutoMapper(typeof(Program));
+if (string.IsNullOrEmpty(connectionString))
+{
+    // Fallback si no encuentra la conexión
+    if (builder.Environment.IsDevelopment())
+    {
+        connectionString = "Server=(localdb)\\MSSQLLocalDB;Database=GestionDespensaLocal;Trusted_Connection=True;TrustServerCertificate=True";
+    }
+    else
+    {
+        connectionString = "workstation id=DespensaRaquelBD.mssql.somee.com;packet size=4096;user id=PaulaMoratalla_SQLLogin_1;pwd=xfapk6pw6i;data source=DespensaRaquelBD.mssql.somee.com;persist security info=False;initial catalog=DespensaRaquelBD;TrustServerCertificate=True";
+    }
+}
 
-// Tus repositorios...
+Console.WriteLine($"🔗 Usando conexión: {connectionString}");
+
+// ✅ CONFIGURACIÓN DE ENTITY FRAMEWORK
+builder.Services.AddDbContext<Context>(options =>
+    options.UseSqlServer(connectionString));
+
+// ✅ CONFIGURACIÓN AUTOMAPPER SEGURA
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
+
+// ✅ TUS REPOSITORIOS
 builder.Services.AddScoped<ICajaRepositorio, CajaRepositorio>();
 builder.Services.AddScoped<IClienteRepositorio, ClienteRepositorio>();
 builder.Services.AddScoped<IProductoRepositorio, ProductoRepositorio>();
@@ -34,34 +53,51 @@ builder.Services.AddScoped<IDetalleCompraProveedorRepositorio, DetalleCompraProv
 
 var app = builder.Build();
 
-// ✅ SOLO verificación básica - SIN migraciones automáticas
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<Context>();
+// ✅ CONFIGURACIÓN DEL PIPELINE - VERSIÓN SIMPLIFICADA
 
-        if (context.Database.CanConnect())
-        {
-            Console.WriteLine("✅ Conexión exitosa con la base de datos Somee!");
-        }
-        else
-        {
-            Console.WriteLine("⚠️ No se pudo conectar a la base de datos");
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine("❌ Error de conexión: " + ex.Message);
-    }
-}
-
-// Configuración del pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage();
+
+    Console.WriteLine("🚀 MODO DESARROLLO - BD Local");
+
+    // ✅ INICIALIZACIÓN BD SOLO EN DESARROLLO
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<Context>();
+
+        Console.WriteLine("🔄 Creando BD local...");
+        await context.Database.EnsureCreatedAsync();
+        Console.WriteLine("✅ BD local lista");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️ Error con BD local: {ex.Message}");
+        // No detenemos la aplicación por esto
+    }
+}
+else
+{
+    Console.WriteLine("🚀 MODO PRODUCCIÓN - Somee");
+
+    // ✅ SOLO VERIFICAR CONEXIÓN EN PRODUCCIÓN
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<Context>();
+
+        if (await context.Database.CanConnectAsync())
+        {
+            Console.WriteLine("✅ Conectado a Somee correctamente");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error conectando a Somee: {ex.Message}");
+    }
 }
 
 app.UseHttpsRedirection();
@@ -73,4 +109,5 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapFallbackToFile("index.html");
 
+Console.WriteLine("🎯 Aplicación iniciada correctamente");
 app.Run();

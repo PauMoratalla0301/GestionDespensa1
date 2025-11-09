@@ -1,68 +1,54 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿<div class="top-row ps-3 navbar navbar-dark" style="background: #27ae60;">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Gestión Despensa</a>
+        <a class="navbar-brand" href="" style="color: white !important;">
+            <i class="fas fa-store me-2"></i>Gestión Despensa
+        </a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
     </div>
 </div>
 
-<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+<div class="@NavMenuCssClass" style="background: #27ae60; min-height: 100vh;">
     <nav class="flex-column">
-        <!-- Sección Ventas -->
-        <div class="nav-section">Ventas</div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="ventas" Match="NavLinkMatch.Prefix">
+            <NavLink class="nav-link" href="cajas/nuevo" style="color: white;">
+                <i class="fas fa-plus-circle me-2"></i> Nueva Caja
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="cajas" style="color: white;">
+                <i class="fas fa-list me-2"></i> Registro de Cajas
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="ventas/nuevo" style="color: white;">
+                <i class="fas fa-cash-register me-2"></i> Nueva Venta
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="ventas" style="color: white;">
                 <i class="fas fa-list me-2"></i> Lista de Ventas
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="ventas/nuevo">
-                <i class="fas fa-cash-register me-2"></i> Nueva Venta
-            </NavLink>
-        </div>
-
-        <!-- Sección Gestión -->
-       @*  <div class="nav-section">Gestión</div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="inventario">
-                <i class="fas fa-boxes me-2"></i> Inventario
-            </NavLink>
-        </div> *@
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="productos">
+            <NavLink class="nav-link" href="productos" style="color: white;">
                 <i class="fas fa-tags me-2"></i> Productos
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="categorias">
+            <NavLink class="nav-link" href="categorias" style="color: white;">
                 <i class="fas fa-folder me-2"></i> Categorías
             </NavLink>
         </div>
-
-        <!-- Sección Personas -->
-        <div class="nav-section">Personas</div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="clientes">
+            <NavLink class="nav-link" href="clientes" style="color: white;">
                 <i class="fas fa-users me-2"></i> Clientes
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="proveedores">
+            <NavLink class="nav-link" href="proveedores" style="color: white;">
                 <i class="fas fa-truck me-2"></i> Proveedores
-            </NavLink>
-        </div>
-
-        <!-- Sección Caja -->
-        <div class="nav-section">Caja</div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="cajas" Match="NavLinkMatch.Prefix">
-                <i class="fas fa-cash-register me-2"></i> Registro de Cajas
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="cajas/nuevo">
-                <i class="fas fa-plus-circle me-2"></i> Nueva Caja
             </NavLink>
         </div>
     </nav>
