@@ -47,8 +47,8 @@ else
                     <thead class="table-dark">
                         <tr>
                             <th>Descripción</th>
-                            <th>Precio</th>
-                            <th>% Ganancia</th>
+                            <th>Precio Unitario</th>
+                            <th>Precio Final</th>
                             <th>Stock</th>
                             <th>Stock Mínimo</th>
                             <th>Categoría</th>
@@ -58,6 +58,7 @@ else
                     <tbody>
                         @foreach (var producto in productos)
                         {
+                            var precioFinal = CalcularPrecioFinal(producto.PrecioUnitario, producto.GananciaPorcentaje);
                             <tr class="@(producto.StockActual <= producto.StockMinimo ? "table-warning" : "")">
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -68,7 +69,7 @@ else
                                     </div>
                                 </td>
                                 <td class="text-success fw-bold">@producto.PrecioUnitario.ToString("C")</td>
-                                <td>@producto.GananciaPorcentaje.ToString("F1")%</td>
+                                <td class="text-primary fw-bold fs-6">@precioFinal.ToString("C")</td>
                                 <td>
                                     <span class="badge @(producto.StockActual <= producto.StockMinimo ? "bg-danger" : "bg-success") fs-6">
                                         @producto.StockActual
@@ -191,6 +192,16 @@ else
     private string ObtenerNombreCategoria(int idCategoria)
     {
         return categorias.FirstOrDefault(c => c.Id == idCategoria)?.NombreCategoria ?? "Sin categoría";
+    }
+
+    private decimal CalcularPrecioFinal(decimal precioUnitario, decimal gananciaPorcentaje)
+    {
+        if (precioUnitario > 0 && gananciaPorcentaje >= 0)
+        {
+            decimal ganancia = precioUnitario * (gananciaPorcentaje / 100);
+            return precioUnitario + ganancia;
+        }
+        return 0;
     }
 
     private void NuevoProducto() => Navigation.NavigateTo("/productos/nuevo");

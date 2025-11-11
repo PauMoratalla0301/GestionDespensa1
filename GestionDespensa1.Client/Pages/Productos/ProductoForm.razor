@@ -63,7 +63,7 @@
                         <div class="form-group mb-3">
                             <label for="precio" class="form-label fw-bold">Precio Unitario *</label>
                             <InputNumber id="precio" @bind-Value="producto.PrecioUnitario" class="form-control"
-                                         step="0.01" min="0" />
+                                         step="0.01" min="0" @oninput="CalcularPrecioFinal" />
                             <ValidationMessage For="@(() => producto.PrecioUnitario)" class="text-danger small" />
                         </div>
                     </div>
@@ -71,11 +71,25 @@
                         <div class="form-group mb-3">
                             <label for="ganancia" class="form-label fw-bold">% Ganancia *</label>
                             <InputNumber id="ganancia" @bind-Value="producto.GananciaPorcentaje" class="form-control"
-                                         step="0.1" min="0" max="100" />
+                                         step="0.1" min="0" max="100" @oninput="CalcularPrecioFinal" />
                             <ValidationMessage For="@(() => producto.GananciaPorcentaje)" class="text-danger small" />
                         </div>
                     </div>
                     <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="precioFinal" class="form-label fw-bold">Precio Final</label>
+                            <div class="form-control bg-light">
+                                @precioFinal.ToString("C2")
+                            </div>
+                            <small class="form-text text-muted">
+                                Precio calculado automáticamente
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="stockActual" class="form-label fw-bold">Stock Actual *</label>
                             <InputNumber id="stockActual" @bind-Value="producto.StockActual" class="form-control"
@@ -83,9 +97,6 @@
                             <ValidationMessage For="@(() => producto.StockActual)" class="text-danger small" />
                         </div>
                     </div>
-                </div>
-
-                <div class="row">
                     <div class="col-md-6">
                         <div class="form-group mb-4">
                             <label for="stockMinimo" class="form-label fw-bold">Stock Mínimo *</label>
@@ -126,6 +137,7 @@
     private bool cargando = false;
     private bool categoriasCargando = true;
     private string mensajeError = string.Empty;
+    private decimal precioFinal = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -135,6 +147,22 @@
         {
             await CargarProducto();
         }
+
+        CalcularPrecioFinal(); // Calcular precio inicial
+    }
+
+    private void CalcularPrecioFinal()
+    {
+        if (producto.PrecioUnitario > 0 && producto.GananciaPorcentaje >= 0)
+        {
+            decimal ganancia = producto.PrecioUnitario * (producto.GananciaPorcentaje / 100);
+            precioFinal = producto.PrecioUnitario + ganancia;
+        }
+        else
+        {
+            precioFinal = 0;
+        }
+        StateHasChanged();
     }
 
     private async Task CargarCategorias()
@@ -163,6 +191,7 @@
         if (!respuesta.Error && respuesta.Respuesta != null)
         {
             producto = respuesta.Respuesta;
+            CalcularPrecioFinal(); // Calcular precio al cargar un producto existente
         }
         else
         {
