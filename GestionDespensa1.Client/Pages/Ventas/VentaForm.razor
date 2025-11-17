@@ -40,8 +40,8 @@
                         <div class="form-group mb-3">
                             <label for="cliente" class="form-label fw-bold">Cliente</label>
                             <InputSelect id="cliente" @bind-Value="venta.IdCliente" class="form-control">
-                                <option value="0">Cliente ocasional (Sin datos)</option>
-                                @foreach (var cliente in clientes)
+                                <option value="0">Cliente ocasional (Consumidor final)</option>
+                                @foreach (var cliente in clientes.Where(c => !c.Nombre.Contains("CONSUMIDOR")))
                                 {
                                     <option value="@cliente.Id">@cliente.Nombre @cliente.Apellido - @cliente.Dni</option>
                                 }
@@ -387,7 +387,7 @@
                     <button type="button" class="btn btn-secondary" @onclick="@VolverAProductoExistente">Volver</button>
                     <button type="button" class="btn btn-success" @onclick="@AgregarProductoNuevo"
                             disabled="@(!PuedeAgregarProductoNuevo)">
-                        <i class="bi bi-plus me-1"></i> Añadir Producto Nuevo
+                        <i class="fas fas-plus me-1"></i> Guardar en Lista y Agregar
                     </button>
                 </div>
             </div>
@@ -505,19 +505,19 @@
     // Métodos simplificados para manejar cambios en los inputs
     private void OnPagoEfectivoChanged(ChangeEventArgs e)
     {
-        pagoEfectivo = ObtenerDecimal(e.Value);
+        pagoEfectivo = ParseDecimalCorregido(e.Value);
         OnPagoChanged();
     }
 
     private void OnPagoTransferenciaChanged(ChangeEventArgs e)
     {
-        pagoTransferencia = ObtenerDecimal(e.Value);
+        pagoTransferencia = ParseDecimalCorregido(e.Value);
         OnPagoChanged();
     }
 
     private void OnPagoTarjetaChanged(ChangeEventArgs e)
     {
-        pagoTarjeta = ObtenerDecimal(e.Value);
+        pagoTarjeta = ParseDecimalCorregido(e.Value);
         OnPagoChanged();
     }
 
@@ -535,8 +535,8 @@
 
     private void OnPrecioDetalleChanged(ChangeEventArgs e)
     {
-        detalleSeleccionado.PrecioUnitario = ObtenerDecimal(e.Value);
-        StateHasChanged();
+        detalleSeleccionado.PrecioUnitario = ParseDecimalCorregido(e.Value);
+        OnPagoChanged();
     }
 
     private void OnCantidadProductoNuevoChanged(ChangeEventArgs e)
@@ -547,8 +547,8 @@
 
     private void OnPrecioProductoNuevoChanged(ChangeEventArgs e)
     {
-        productoNuevoPrecio = ObtenerDecimal(e.Value);
-        StateHasChanged();
+        productoNuevoPrecio = ParseDecimalCorregido(e.Value);
+        OnPagoChanged();
     }
 
     private decimal CalcularPrecioFinal(decimal precioUnitario, decimal gananciaPorcentaje)
@@ -813,33 +813,67 @@
         CerrarModalProducto();
     }
 
-    private void AgregarProductoNuevo()
+    private async Task AgregarProductoNuevo()
     {
         if (string.IsNullOrWhiteSpace(productoNuevoNombre))
         {
-            JS.InvokeVoidAsync("alert", "Ingrese el nombre del producto");
+            await JS.InvokeVoidAsync("alert", "Ingrese el nombre del producto");
             return;
         }
 
         if (productoNuevoCantidad <= 0 || productoNuevoPrecio <= 0)
         {
-            JS.InvokeVoidAsync("alert", "Cantidad y precio deben ser mayores a 0");
+            await JS.InvokeVoidAsync("alert", "Cantidad y precio deben ser mayores a 0");
             return;
         }
 
-        // Agregar producto nuevo (IdProducto = 0 indica que no está en el catálogo)
-        detallesVenta.Add(new DetalleVentaDTO
+        try
         {
-            IdProducto = 0, // 0 indica producto no catalogado
-            DescripcionProducto = productoNuevoNombre.Trim(),
-            Cantidad = productoNuevoCantidad,
-            PrecioUnitario = productoNuevoPrecio,
-            StockActual = 0 // No aplica para productos nuevos
-        });
+            // 1. PRIMERO: Guardar el producto en el catálogo
+            var nuevoProducto = new CrearProductoDTO
+            {
+                Descripcion = productoNuevoNombre.Trim(),
+                PrecioUnitario = productoNuevoPrecio,
+                StockActual = productoNuevoCantidad, // Usar la cantidad como stock inicial
+                StockMinimo = 5, // Stock mínimo por defecto - ajusta según mi sistema
+                GananciaPorcentaje = 0, // O calcular una ganancia por defecto
+                IdCategoria = 1, // Categoría por defecto - ajusta según tu sistema
 
-        ActualizarTotales();
-        CerrarModalProductoNuevo();
+            };
+
+            var respuesta = await ProductoService.Insert(nuevoProducto);
+
+            if (!respuesta.Error && respuesta.Respuesta > 0)
+            {
+                // 2. SEGUNDO: Agregar a la venta con el ID real del producto
+                detallesVenta.Add(new DetalleVentaDTO
+                {
+                    IdProducto = respuesta.Respuesta, // ID del producto guardado
+                    DescripcionProducto = productoNuevoNombre.Trim(),
+                    Cantidad = productoNuevoCantidad,
+                    PrecioUnitario = productoNuevoPrecio,
+                    StockActual = productoNuevoCantidad
+                });
+
+                // 3. TERCERO: Recargar la lista de productos disponibles
+                await CargarProductos();
+
+                ActualizarTotales();
+                CerrarModalProductoNuevo();
+
+                await JS.InvokeVoidAsync("alert", "✅ Producto agregado y guardado en catálogo");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "❌ Error al guardar el producto en el catálogo");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"❌ Error: {ex.Message}");
+        }
     }
+
 
     private void EditarDetalle(DetalleVentaDTO detalle)
     {
@@ -868,6 +902,42 @@
     {
         venta.Total = TotalVenta;
         ActualizarPagos();
+    }
+
+    private decimal ParseDecimalCorregido(object value)
+    {
+        if (value == null) return 0;
+
+        if (value is string strValue)
+        {
+            // Reemplazar coma por punto para formato universal
+            strValue = strValue.Replace(",", ".");
+            if (decimal.TryParse(strValue, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out decimal result))
+            {
+                return Math.Round(result, 2);
+            }
+        }
+
+        return Convert.ToDecimal(value);
+    }
+
+    private int ObtenerIdClienteValido()
+    {
+        if (venta.IdCliente == 0) // Cliente ocasional seleccionado
+        {
+            // Buscar CONSUMIDOR FINAL en la lista de clientes
+            var consumidorFinal = clientes.FirstOrDefault(c =>
+                c.Nombre.Contains("CONSUMIDOR") || c.Nombre.Contains("Consumidor"));
+
+            if (consumidorFinal != null)
+                return consumidorFinal.Id;
+
+            // Si no existe, usar el primer cliente disponible
+            return clientes.FirstOrDefault()?.Id ?? 1;
+        }
+
+        return venta.IdCliente; // Usar el cliente seleccionado normalmente
     }
 
     private async Task GuardarVenta()
@@ -902,17 +972,23 @@
 
         if (Id == 0)
         {
+            //CORREGIR: Redondear todos los valores decimales a 2 decimales
             var crearVenta = new CrearVentaDTO
             {
-                IdCliente = venta.IdCliente,
+                IdCliente = ObtenerIdClienteValido(), // ← AQUÍ EL CAMBIO
                 FechaVenta = venta.FechaVenta,
                 Estado = venta.Estado,
-                Total = venta.Total,
-                MontoPagado = venta.MontoPagado,
-                SaldoPendiente = venta.SaldoPendiente,
+                Total = Math.Round(venta.Total, 2),
+                MontoPagado = Math.Round(venta.MontoPagado, 2),
+                SaldoPendiente = Math.Round(venta.SaldoPendiente, 2),
                 MetodoPago = venta.MetodoPago,
                 Notas = venta.Notas,
-                DetallesVenta = detallesVenta
+                DetallesVenta = detallesVenta.Select(d => new DetalleVentaDTO
+                {
+                    IdProducto = d.IdProducto,
+                    Cantidad = d.Cantidad,
+                    PrecioUnitario = Math.Round(d.PrecioUnitario, 2),//Redondear precio unitario
+                }).ToList()
             };
 
             var respuesta = await VentaService.Insert(crearVenta);
@@ -923,12 +999,29 @@
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+                
+                var mensajeError = await respuesta.ObtenerError();
+                // MEJORAR: Obtener más detalles del error
+                await JS.InvokeVoidAsync("alert", $"❌ Error al crear venta: {mensajeError}");
+                Console.WriteLine($"Error detallado: {mensajeError}");
+
+                // También mostrar los datos que se están enviando
+                Console.WriteLine($"DATOS ENVIADOS: Cliente: {crearVenta.IdCliente}, Total: {crearVenta.Total}, Productos: {crearVenta.DetallesVenta.Count}");
             }
         }
         else
         {
-            venta.DetallesVenta = detallesVenta;
+            // Aplicar mismo redondeo para actualización
+            venta.Total = Math.Round(venta.Total, 2);
+            venta.MontoPagado = Math.Round(venta.MontoPagado, 2);
+            venta.SaldoPendiente = Math.Round(venta.SaldoPendiente, 2);
+            venta.DetallesVenta = detallesVenta.Select(d => new DetalleVentaDTO
+            {
+                IdProducto = d.IdProducto,
+                Cantidad = d.Cantidad,
+                PrecioUnitario = Math.Round(d.PrecioUnitario, 2)
+            }).ToList();
+
             var respuesta = await VentaService.Update(Id, venta);
             if (!respuesta.Error)
             {
@@ -937,8 +1030,11 @@
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
+                var mensajeError = await respuesta.ObtenerError();
+                await JS.InvokeVoidAsync("alert", $"❌ Error al actualizar venta: {mensajeError}");
+                Console.WriteLine($"Error detallado: {mensajeError}");
             }
+
         }
 
         cargando = false;
