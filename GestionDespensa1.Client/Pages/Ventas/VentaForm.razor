@@ -39,13 +39,21 @@
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="cliente" class="form-label fw-bold">Cliente</label>
-                            <InputSelect id="cliente" @bind-Value="venta.IdCliente" class="form-control">
-                                <option value="0">Cliente ocasional (Consumidor final)</option>
-                                @foreach (var cliente in clientes.Where(c => !c.Nombre.Contains("CONSUMIDOR")))
-                                {
-                                    <option value="@cliente.Id">@cliente.Nombre @cliente.Apellido - @cliente.Dni</option>
-                                }
-                            </InputSelect>
+                            <div class="input-group">
+                                <!-- ✅ CAMBIAR InputSelect por select HTML normal -->
+                                <select id="cliente" @bind="venta.IdCliente" class="form-control">
+                                    <option value="0">Cliente ocasional (Consumidor final)</option>
+                                    @foreach (var cliente in clientes.Where(c => !c.Nombre.Contains("CONSUMIDOR")))
+                                    {
+                                        <option value="@cliente.Id">@cliente.Nombre @cliente.Apellido - @cliente.Dni</option>
+                                    }
+                                </select>
+                                <!-- ✅ BOTÓN + INTEGRADO -->
+                                <button type="button" class="btn btn-outline-primary" @onclick="AbrirModalCliente"
+                                        title="Agregar nuevo cliente" disabled="@cargando">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
                             <div class="form-text text-muted">
                                 Seleccione "Cliente ocasional" para ventas sin datos del cliente
                             </div>
@@ -251,13 +259,12 @@
                     <button type="button" class="btn btn-secondary me-2" @onclick="@Cancelar" disabled="@cargando">
                         <i class="bi bi-x me-1"></i> Cancelar
                     </button>
-                    <a href="/clientes/nuevo" class="btn btn-outline-primary" target="_blank">
-                        <i class="bi bi-plus me-1"></i> Nuevo Cliente
-                    </a>
                 </div>
             </EditForm>
         }
     </div>
+
+
 </div>
 
 <!-- Modal para productos existentes -->
@@ -344,7 +351,7 @@
 <!-- Modal para productos nuevos -->
 @if (mostrarModalProductoNuevo)
 {
-    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+    <div class="modal fade show" style="display: block; background-color:rgba(0,0,0,0.5);" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -387,13 +394,102 @@
                     <button type="button" class="btn btn-secondary" @onclick="@VolverAProductoExistente">Volver</button>
                     <button type="button" class="btn btn-success" @onclick="@AgregarProductoNuevo"
                             disabled="@(!PuedeAgregarProductoNuevo)">
-                        <i class="fas fas-plus me-1"></i> Guardar en Lista y Agregar
+                        <i class="bi bi-plus me-1"></i> Agregar
                     </button>
                 </div>
             </div>
         </div>
     </div>
 }
+<!-- Modal para Nuevo Cliente -->
+@if (mostrarModalCliente)
+{
+    <div class="modal-backdrop fade show" style="z-index: 1050;"></div>
+    <div class="modal fade show" style="display: block; z-index: 1051;" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo Cliente</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalCliente"
+                            disabled="@guardandoCliente"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@nuevoCliente">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="alert alert-danger" />
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">Nombre *</label>
+                                    <InputText @bind-Value="@nuevoCliente.Nombre" class="form-control"
+                                               placeholder="Ingrese el nombre" disabled="@guardandoCliente" />
+                                    <ValidationMessage For="@(() => nuevoCliente.Nombre)" class="text-danger small" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">Apellido *</label>
+                                    <InputText @bind-Value="@nuevoCliente.Apellido" class="form-control"
+                                               placeholder="Ingrese el apellido" disabled="@guardandoCliente" />
+                                    <ValidationMessage For="@(() => nuevoCliente.Apellido)" class="text-danger small" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">DNI *</label>
+                                    <InputText @bind-Value="@nuevoCliente.Dni" class="form-control"
+                                               placeholder="Ingrese el DNI" disabled="@guardandoCliente" />
+                                    <ValidationMessage For="@(() => nuevoCliente.Dni)" class="text-danger small" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">Teléfono</label>
+                                    <InputText @bind-Value="@nuevoCliente.Telefono" class="form-control"
+                                               placeholder="Ingrese el teléfono" disabled="@guardandoCliente" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            <InputText @bind-Value="@nuevoCliente.Email" class="form-control"
+                                       placeholder="Ingrese el email" disabled="@guardandoCliente" />
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Dirección</label>
+                            <textarea @bind="@nuevoCliente.Direccion" class="form-control" rows="3"
+                                      placeholder="Ingrese la dirección" disabled="@guardandoCliente"></textarea>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Saldo Pendiente</label>
+                            <InputNumber @bind-Value="@nuevoCliente.SaldoPendiente" class="form-control"
+                                         placeholder="0.00" step="0.01" min="0" disabled="@guardandoCliente" />
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalCliente"
+                            disabled="@guardandoCliente">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="GuardarNuevoCliente"
+                            disabled="@guardandoCliente">
+                        <i class="bi @(guardandoCliente ? "bi-arrow-repeat spinner" : "bi-save") me-1"></i>
+                        @(guardandoCliente ? "Guardando..." : "Guardar Cliente")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 
 <style>
     .spinner {
@@ -446,6 +542,11 @@
     private int productoNuevoCantidad = 1;
     private decimal productoNuevoPrecio = 0;
 
+    // Variables para el modal de nuevo cliente 
+    private bool mostrarModalCliente = false;
+    private CrearClienteDTO nuevoCliente = new();  
+    private bool guardandoCliente = false;
+
     // Estados de carga
     private bool cargando = false;
     private bool clientesCargando = true;
@@ -476,6 +577,83 @@
         if (Id > 0)
         {
             await CargarVenta();
+        }
+    }
+
+    // Métodos para el modal de cliente
+    private void AbrirModalCliente()
+    {
+        nuevoCliente = new CrearClienteDTO();  
+        mostrarModalCliente = true;
+        StateHasChanged();
+    }
+
+    private void CerrarModalCliente()
+    {
+        if (!guardandoCliente)
+        {
+            mostrarModalCliente = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GuardarNuevoCliente()
+    {
+        guardandoCliente = true;
+        StateHasChanged();
+
+        try
+        {
+            // Validar campos requeridos
+            if (string.IsNullOrWhiteSpace(nuevoCliente.Nombre) ||
+                string.IsNullOrWhiteSpace(nuevoCliente.Apellido) ||
+                string.IsNullOrWhiteSpace(nuevoCliente.Dni))
+            {
+                await JS.InvokeVoidAsync("alert", "Nombre, Apellido y DNI son campos obligatorios");
+                guardandoCliente = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Validar que no exista un cliente con el mismo DNI
+            var clienteExistente = clientes.FirstOrDefault(c => c.Dni == nuevoCliente.Dni);
+            if (clienteExistente != null)
+            {
+                await JS.InvokeVoidAsync("alert", $"Ya existe un cliente con DNI: {nuevoCliente.Dni}");
+                guardandoCliente = false;
+                StateHasChanged();
+                return;
+            }
+
+            var respuesta = await ClienteService.Insert(nuevoCliente);
+
+            if (!respuesta.Error && respuesta.Respuesta > 0)
+            {
+                // Recargar la lista de clientes
+                await CargarClientes();
+
+                // Seleccionar automáticamente el nuevo cliente en el dropdown
+                venta.IdCliente = respuesta.Respuesta;
+
+                // Cerrar el modal
+                mostrarModalCliente = false;
+
+                await JS.InvokeVoidAsync("alert", "✅ Cliente guardado exitosamente y seleccionado");
+            }
+            else
+            {
+                var mensajeError = await respuesta.ObtenerError();
+                await JS.InvokeVoidAsync("alert", $"❌ Error al guardar cliente: {mensajeError}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"❌ Error: {ex.Message}");
+        }
+        finally
+        {
+            guardandoCliente = false;
+            StateHasChanged();
         }
     }
 
@@ -1040,6 +1218,6 @@
         cargando = false;
         StateHasChanged();
     }
-
+    
     private void Cancelar() => Navigation.NavigateTo("/ventas");
 }
