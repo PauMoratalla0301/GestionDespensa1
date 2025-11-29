@@ -242,13 +242,14 @@
         resumenCargando = true;
         // Aquí llamarías a tu servicio para obtener el resumen de ventas del día
         // Por ahora simulamos datos
-        resumenVentas.TotalVentas = 1500.75m;
-        resumenVentas.TotalEfectivo = 800.25m;
-        resumenVentas.TotalTarjeta = 450.50m;
-        resumenVentas.TotalTransferencia = 250.00m;
-        resumenVentas.CantidadVentas = 12;
+        resumenVentas.TotalVentas = 25000.00m;
+        resumenVentas.TotalEfectivo = 150000.00m;
+        resumenVentas.TotalTarjeta = 55000.00m;
+        resumenVentas.TotalTransferencia = 45000.00m;
+        resumenVentas.CantidadVentas = 25;
         resumenVentas.ImporteInicio = caja.ImporteInicio;
-
+        resumenVentas.TotalEgresos = 30000.00m;
+        resumenVentas.ImporteCierre = caja.ImporteCierre;
         resumenCargando = false;
         StateHasChanged();
     }
@@ -272,12 +273,12 @@
             var respuesta = await CajaService.Insert(crearCaja);
             if (!respuesta.Error && respuesta.Respuesta > 0)
             {
-                await JS.InvokeVoidAsync("alert", "Caja abierta exitosamente");
+                await JS.InvokeVoidAsync("alert", "✅Caja abierta exitosamente");
                 Navigation.NavigateTo("/cajas");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"Error: {await respuesta.ObtenerError()}");
+                await JS.InvokeVoidAsync("alert", $"❌Error: {await respuesta.ObtenerError()}");
             }
         }
         else
@@ -285,12 +286,12 @@
             var respuesta = await CajaService.Update(Id, caja);
             if (!respuesta.Error)
             {
-                await JS.InvokeVoidAsync("alert", "Caja actualizada exitosamente");
+                await JS.InvokeVoidAsync("alert", "✅Caja actualizada exitosamente");
                 Navigation.NavigateTo("/cajas");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"Error: {await respuesta.ObtenerError()}");
+                await JS.InvokeVoidAsync("alert", $"❌Error: {await respuesta.ObtenerError()}");
             }
         }
 

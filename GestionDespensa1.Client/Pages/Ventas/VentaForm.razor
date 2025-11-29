@@ -65,6 +65,19 @@
                             <InputDate id="fecha" @bind-Value="venta.FechaVenta" class="form-control" />
                             <ValidationMessage For="@(() => venta.FechaVenta)" class="text-danger small" />
                         </div>
+                        <!-- ✅ BOTONES PRODUCTO NUEVO Y AÑADIR PRODUCTO EXISTENTE -->
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Acciones de Productos</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-success btn-sm" @onclick="@MostrarModalProductoNuevo">
+                                    <i class="bi bi-plus-circle me-1"></i> Producto Nuevo
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm" @onclick="@MostrarModalProducto">
+                                    <i class="bi bi-plus me-1"></i> Añadir Producto Existente
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -117,16 +130,6 @@
                                 </tbody>
                             </table>
 
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <button type="button" class="btn btn-success btn-sm me-2" @onclick="@MostrarModalProductoNuevo">
-                                        <i class="bi bi-plus-circle me-1"></i> Producto Nuevo
-                                    </button>
-                                    <button type="button" class="btn btn-primary" @onclick="@MostrarModalProducto">
-                                        <i class="bi bi-plus me-1"></i> Añadir Producto Existente
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -375,6 +378,7 @@
                                        min="1" class="form-control" />
                             </div>
                         </div>
+
                         <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Precio Final *</label>
