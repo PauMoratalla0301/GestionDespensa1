@@ -1,0 +1,315 @@
+﻿@page "/compras/nueva"
+@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Entidades
+@inject ICompraProveedorService CompraProveedorService
+@inject IProveedorService ProveedorService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Nueva Compra - GestionDespensa</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Encabezado -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-cart-plus me-2"></i>Nueva Compra
+                    </h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="/proveedores">Proveedores</a></li>
+                            <li class="breadcrumb-item"><a href="/proveedores/detalles/@proveedorId">Proveedor</a></li>
+                            <li class="breadcrumb-item active">Nueva Compra</li>
+                        </ol>
+                    </nav>
+                </div>
+                <button class="btn btn-outline-secondary" @onclick="Cancelar">
+                    <i class="fas fa-times me-1"></i> Cancelar
+                </button>
+            </div>
+
+            <!-- Formulario de compra -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Registrar Nueva Compra</h5>
+                </div>
+                <div class="card-body">
+                    @if (cargando)
+                    {
+                        <div class="alert alert-info text-center py-4">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Cargando información...
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(mensajeError))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>@mensajeError
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="compra" OnValidSubmit="GuardarCompra">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+
+                            <!-- Información del proveedor -->
+                            <div class="card bg-light mb-4">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-truck me-2"></i>Proveedor
+                                    </h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Nombre:</label>
+                                                <p class="form-control-plaintext">@proveedorSeleccionado?.Nombre</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">CUIT:</label>
+                                                <p class="form-control-plaintext">@proveedorSeleccionado?.CUIT</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Datos de la compra -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="fechaCompra" class="form-label fw-bold">Fecha de Compra *</label>
+                                        <InputDate id="fechaCompra" @bind-Value="fechaCompra" class="form-control" />
+                                        <ValidationMessage For="@(() => compra.FechaCompra)" class="text-danger small" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="observaciones" class="form-label">Observaciones</label>
+                                        <InputTextArea id="observaciones" @bind-Value="compra.Observaciones"
+                                                       class="form-control" rows="2"
+                                                       placeholder="Ej: Pago en efectivo, entrega programada, etc." />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Detalles de productos (simplificado) -->
+                            <div class="mb-4">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-boxes me-2"></i>Productos Comprados
+                                </h6>
+
+                                <!-- Lista de productos -->
+                                <div class="table-responsive mb-3">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th>Cantidad</th>
+                                                <th>Precio Unitario</th>
+                                                <th>Subtotal</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (int i = 0; i < detalles.Count; i++)
+                                            {
+                                                var detalle = detalles[i];
+                                                <tr>
+                                                    <td>
+                                                        <InputText @bind-Value="detalle.NombreProducto"
+                                                                   class="form-control form-control-sm"
+                                                                   placeholder="Nombre del producto" />
+                                                    </td>
+                                                    <td>
+                                                        <InputNumber @bind-Value="detalle.Cantidad"
+                                                                     class="form-control form-control-sm"
+                                                                     placeholder="Cantidad" />
+                                                    </td>
+                                                    <td>
+                                                        <InputNumber @bind-Value="detalle.PrecioUnitario"
+                                                                     class="form-control form-control-sm"
+                                                                     placeholder="0.00" />
+                                                    </td>
+                                                    <td class="fw-bold">
+                                                        $@((detalle.Cantidad * detalle.PrecioUnitario).ToString("N2"))
+                                                    </td>
+                                                    <td>
+                                                        @if (detalles.Count > 1)
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-danger"
+                                                                    @onclick="() => EliminarDetalle(i)">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td colspan="3" class="text-end fw-bold">Total:</td>
+                                                <td class="fw-bold text-success">
+                                                    $@detalles.Sum(d => d.Cantidad * d.PrecioUnitario).ToString("N2")
+                                                </td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+                                <button type="button" class="btn btn-outline-primary btn-sm" @onclick="AgregarDetalle">
+                                    <i class="fas fa-plus me-1"></i> Agregar Producto
+                                </button>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-secondary" @onclick="Cancelar">
+                                    <i class="fas fa-times me-1"></i> Cancelar
+                                </button>
+                                <button type="submit" class="btn btn-success" disabled="@cargandoGuardar">
+                                    <i class="fas @(cargandoGuardar ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
+                                    @(cargandoGuardar ? "Guardando..." : "Guardar Compra")
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "proveedorId")]
+    public int? ProveedorId { get; set; }
+
+    private CrearCompraProveedorDTO compra = new();
+    private List<DetalleCompraTemp> detalles = new();
+    private ProveedorDTO? proveedorSeleccionado;
+    private DateTime fechaCompra = DateTime.Today;
+    private bool cargando = true;
+    private bool cargandoGuardar = false;
+    private string mensajeError = string.Empty;
+    private int proveedorId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ProveedorId.HasValue && ProveedorId.Value > 0)
+        {
+            proveedorId = ProveedorId.Value;
+            await CargarProveedor();
+        }
+        else
+        {
+            mensajeError = "No se ha especificado un proveedor";
+            cargando = false;
+        }
+    }
+
+    private async Task CargarProveedor()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        var respuesta = await ProveedorService.Get(proveedorId);
+        if (!respuesta.Error && respuesta.Respuesta != null)
+        {
+            proveedorSeleccionado = respuesta.Respuesta;
+            // Inicializar primer detalle
+            AgregarDetalle();
+        }
+        else
+        {
+            mensajeError = "No se pudo cargar la información del proveedor";
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void AgregarDetalle()
+    {
+        detalles.Add(new DetalleCompraTemp());
+        StateHasChanged();
+    }
+
+    private void EliminarDetalle(int index)
+    {
+        if (detalles.Count > 1)
+        {
+            detalles.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private async Task GuardarCompra()
+    {
+        if (!detalles.Any() || detalles.All(d => d.Cantidad <= 0))
+        {
+            await JS.InvokeVoidAsync("alert", "Debe agregar al menos un producto con cantidad mayor a 0");
+            return;
+        }
+
+        cargandoGuardar = true;
+        StateHasChanged();
+
+        try
+        {
+            // Preparar DTO para guardar
+            compra.IdProveedor = proveedorId;
+            compra.FechaCompra = fechaCompra.ToString("yyyy-MM-dd");
+
+            // Aquí deberías mapear los detalles temporales a DTOs reales
+            // Por ahora, solo creamos la compra sin detalles
+            var respuesta = await CompraProveedorService.Insert(compra);
+
+            if (!respuesta.Error && respuesta.Respuesta > 0)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Compra registrada exitosamente");
+                // Redirigir a detalles del proveedor
+                Navigation.NavigateTo($"/proveedores/detalles/{proveedorId}");
+            }
+            else
+            {
+                var error = await respuesta.ObtenerError();
+                await JS.InvokeVoidAsync("alert", $"❌ Error al guardar la compra: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"❌ Error: {ex.Message}");
+        }
+        finally
+        {
+            cargandoGuardar = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancelar()
+    {
+        if (proveedorId > 0)
+        {
+            Navigation.NavigateTo($"/proveedores/detalles/{proveedorId}");
+        }
+        else
+        {
+            Navigation.NavigateTo("/proveedores");
+        }
+    }
+
+    // Clase temporal para manejar detalles en el formulario
+    private class DetalleCompraTemp
+    {
+        public string NombreProducto { get; set; } = string.Empty;
+        public int Cantidad { get; set; } = 1;
+        public decimal PrecioUnitario { get; set; } = 0;
+    }
+
+}

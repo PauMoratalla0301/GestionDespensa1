@@ -39,9 +39,21 @@ namespace GestionDespensa1.Server.Controllers
                     return new List<ProveedorDTO>();
                 }
 
-                var proveedoresDTO = _mapper.Map<List<ProveedorDTO>>(proveedores);
-                Console.WriteLine($"✅ Mapeo exitoso. DTOs: {proveedoresDTO.Count}");
+                // Mapeo manual para incluir Productos
+                var proveedoresDTO = proveedores.Select(p => new ProveedorDTO
+                {
+                    Id = p.Id,
+                    Nombre = p.Nombre,
+                    CUIT = p.CUIT,
+                    Telefono = p.Telefono,
+                    Email = p.Email,
+                    Direccion = p.Direccion,
+                    Estado = p.Estado,
+                    Notas = p.Notas, // Esto ahora contiene las notas originales
+                    Productos = p.Notas // Los productos están en Notas temporalmente
+                }).ToList();
 
+                Console.WriteLine($"✅ Mapeo exitoso. DTOs: {proveedoresDTO.Count}");
                 return Ok(proveedoresDTO);
             }
             catch (Exception ex)
@@ -94,7 +106,8 @@ namespace GestionDespensa1.Server.Controllers
                         Email = p.Email,
                         Direccion = p.Direccion,
                         Estado = p.Estado,
-                        Notas = p.Notas
+                        Notas = p.Notas,
+                        Productos = "" // Vacío para simple
                     })
                     .ToListAsync();
 
@@ -122,7 +135,19 @@ namespace GestionDespensa1.Server.Controllers
                     return NotFound();
                 }
 
-                var proveedorDTO = _mapper.Map<ProveedorDTO>(proveedor);
+                var proveedorDTO = new ProveedorDTO
+                {
+                    Id = proveedor.Id,
+                    Nombre = proveedor.Nombre,
+                    CUIT = proveedor.CUIT,
+                    Telefono = proveedor.Telefono,
+                    Email = proveedor.Email,
+                    Direccion = proveedor.Direccion,
+                    Estado = proveedor.Estado,
+                    Notas = proveedor.Notas,
+                    Productos = proveedor.Notas // Los productos están en Notas
+                };
+
                 Console.WriteLine($"✅ Proveedor encontrado: {proveedorDTO.Nombre}");
                 return Ok(proveedorDTO);
             }
@@ -147,7 +172,19 @@ namespace GestionDespensa1.Server.Controllers
                     return NotFound();
                 }
 
-                var proveedorDTO = _mapper.Map<ProveedorDTO>(proveedor);
+                var proveedorDTO = new ProveedorDTO
+                {
+                    Id = proveedor.Id,
+                    Nombre = proveedor.Nombre,
+                    CUIT = proveedor.CUIT,
+                    Telefono = proveedor.Telefono,
+                    Email = proveedor.Email,
+                    Direccion = proveedor.Direccion,
+                    Estado = proveedor.Estado,
+                    Notas = proveedor.Notas,
+                    Productos = proveedor.Notas
+                };
+
                 Console.WriteLine($"✅ Proveedor encontrado: {proveedorDTO.Nombre}");
                 return Ok(proveedorDTO);
             }
@@ -166,7 +203,18 @@ namespace GestionDespensa1.Server.Controllers
                 Console.WriteLine($"🔍 Buscando proveedores por estado: {estado}");
 
                 var proveedores = await _repositorio.GetByEstado(estado);
-                var proveedoresDTO = _mapper.Map<List<ProveedorDTO>>(proveedores);
+                var proveedoresDTO = proveedores.Select(p => new ProveedorDTO
+                {
+                    Id = p.Id,
+                    Nombre = p.Nombre,
+                    CUIT = p.CUIT,
+                    Telefono = p.Telefono,
+                    Email = p.Email,
+                    Direccion = p.Direccion,
+                    Estado = p.Estado,
+                    Notas = p.Notas,
+                    Productos = p.Notas
+                }).ToList();
 
                 Console.WriteLine($"✅ Proveedores encontrados con estado {estado}: {proveedoresDTO.Count}");
                 return Ok(proveedoresDTO);
@@ -201,7 +249,17 @@ namespace GestionDespensa1.Server.Controllers
             {
                 Console.WriteLine($"📝 Intentando crear proveedor: {crearProveedorDTO.Nombre}");
 
-                var proveedor = _mapper.Map<Proveedor>(crearProveedorDTO);
+                var proveedor = new Proveedor
+                {
+                    Nombre = crearProveedorDTO.Nombre,
+                    CUIT = crearProveedorDTO.CUIT,
+                    Telefono = crearProveedorDTO.Telefono,
+                    Email = crearProveedorDTO.Email,
+                    Direccion = crearProveedorDTO.Direccion,
+                    Estado = crearProveedorDTO.Estado,
+                    Notas = crearProveedorDTO.Notas
+                };
+
                 var idCreado = await _repositorio.Insert(proveedor);
 
                 if (idCreado == -1)
@@ -233,7 +291,18 @@ namespace GestionDespensa1.Server.Controllers
                     return BadRequest("Datos Incorrectos");
                 }
 
-                var proveedor = _mapper.Map<Proveedor>(proveedorDTO);
+                var proveedor = new Proveedor
+                {
+                    Id = proveedorDTO.Id,
+                    Nombre = proveedorDTO.Nombre,
+                    CUIT = proveedorDTO.CUIT,
+                    Telefono = proveedorDTO.Telefono,
+                    Email = proveedorDTO.Email,
+                    Direccion = proveedorDTO.Direccion,
+                    Estado = proveedorDTO.Estado,
+                    Notas = proveedorDTO.Notas
+                };
+
                 var resultado = await _repositorio.Update(id, proveedor);
 
                 if (!resultado)

@@ -13,25 +13,44 @@ namespace GestionDespensa1.Shared.DTO
 
         [Required(ErrorMessage = "El nombre es obligatorio.")]
         [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string Nombre { get; set; }
+        public string Nombre { get; set; } = string.Empty;
 
         [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string CUIT { get; set; }
+        public string CUIT { get; set; } = string.Empty;
 
         [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string Telefono { get; set; }
+        public string Telefono { get; set; } = string.Empty;
 
         [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
         [EmailAddress(ErrorMessage = "El formato del email no es válido.")]
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
         [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string Direccion { get; set; }
+        public string Direccion { get; set; } = string.Empty;
 
         [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string Estado { get; set; }
+        public string Estado { get; set; } = "Activo";
 
         [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string Notas { get; set; }
+        public string Notas { get; set; } = string.Empty;
+
+        // Nueva propiedad para productos del proveedor
+        public List<CompraProveedorDTO> Compras { get; set; } = new List<CompraProveedorDTO>();
+        public string Productos { get; set; } = string.Empty;
+
+        // Propiedad para contacto combinado
+        public string ContactoInfo
+        {
+            get
+            {
+                var contactos = new List<string>();
+                if (!string.IsNullOrEmpty(Telefono))
+                    contactos.Add(Telefono);
+                if (!string.IsNullOrEmpty(Email))
+                    contactos.Add(Email);
+
+                return string.Join(" ", contactos);
+            }
+        }
     }
 }

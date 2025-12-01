@@ -17,28 +17,74 @@ namespace GestionDespensa1.Server.Repositorio
         {
             return await _context.Proveedores
                 .Include(p => p.ComprasProveedor)
+                    .ThenInclude(c => c.DetallesCompra)
+                        .ThenInclude(d => d.Producto)
                 .FirstOrDefaultAsync(p => p.CUIT == cuit);
         }
 
         public async Task<List<Proveedor>> GetByEstado(string estado)
         {
-            return await _context.Proveedores
+            var proveedores = await _context.Proveedores
+                .Include(p => p.ComprasProveedor)
+                    .ThenInclude(c => c.DetallesCompra)
+                        .ThenInclude(d => d.Producto)
                 .Where(p => p.Estado == estado)
                 .ToListAsync();
+
+            // Obtener productos para cada proveedor
+            foreach (var proveedor in proveedores)
+            {
+                await ObtenerProductosProveedor(proveedor);
+            }
+
+            return proveedores;
         }
 
         public async Task<List<Proveedor>> SelectWithRelations()
         {
-            return await _context.Proveedores
+            var proveedores = await _context.Proveedores
                 .Include(p => p.ComprasProveedor)
+                    .ThenInclude(c => c.DetallesCompra)
+                        .ThenInclude(d => d.Producto)
                 .ToListAsync();
+
+            // Obtener productos para cada proveedor
+            foreach (var proveedor in proveedores)
+            {
+                await ObtenerProductosProveedor(proveedor);
+            }
+
+            return proveedores;
         }
 
         public async Task<Proveedor?> SelectByIdWithRelations(int id)
         {
-            return await _context.Proveedores
+            var proveedor = await _context.Proveedores
                 .Include(p => p.ComprasProveedor)
+                    .ThenInclude(c => c.DetallesCompra)
+                        .ThenInclude(d => d.Producto)
                 .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (proveedor != null)
+            {
+                await ObtenerProductosProveedor(proveedor);
+            }
+
+            return proveedor;
+        }
+
+        private async Task ObtenerProductosProveedor(Proveedor proveedor)
+        {
+            // Obtener todos los productos únicos del proveedor
+            var productos = proveedor.ComprasProveedor
+                .SelectMany(c => c.DetallesCompra)
+                .Where(d => d.Producto != null)
+                .Select(d => d.Producto.Descripcion)
+                .Distinct()
+                .ToList();
+
+            // Guardar productos en Notas temporalmente (se mapeará a Productos en el DTO)
+            proveedor.Notas = string.Join(", ", productos);
         }
 
         public async Task<bool> Existe(int id)
@@ -110,9 +156,5 @@ namespace GestionDespensa1.Server.Repositorio
                 return false;
             }
         }
-
-        // ELIMINA ESTOS MÉTODOS DUPLICADOS:
-        // Task<ActionResult<bool>> IProveedorRepositorio.Existe(int id)
-        // Task<ActionResult<int>> IProveedorRepositorio.Insert(Proveedor proveedor)
     }
 }

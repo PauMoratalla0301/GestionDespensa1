@@ -1,0 +1,620 @@
+﻿@page "/proveedores/detalles/{Id:int}"
+@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Entidades
+@using System.Globalization
+@inject IProveedorService ProveedorService
+@inject ICompraProveedorService CompraProveedorService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Detalles del Proveedor - GestionDespensa</PageTitle>
+
+<div class="container-fluid">
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-truck me-2"></i>Detalles del Proveedor
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/proveedores">Proveedores</a></li>
+                    <li class="breadcrumb-item active">@proveedor?.Nombre</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" @onclick="() => EditarProveedor(proveedor?.Id ?? 0)">
+                <i class="fas fa-edit me-1"></i> Editar
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="Volver">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </button>
+        </div>
+    </div>
+
+    @if (cargando)
+    {
+        <div class="alert alert-info text-center py-4">
+            <i class="fas fa-spinner fa-spin me-2 fa-2x"></i>
+            <div class="mt-2">Cargando detalles del proveedor...</div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>@mensajeError
+            <button class="btn btn-sm btn-outline-danger ms-3" @onclick="Volver">Volver</button>
+        </div>
+    }
+    else if (proveedor == null)
+    {
+        <div class="alert alert-warning text-center py-4">
+            <i class="fas fa-exclamation-circle me-2 fa-2x"></i>
+            <div class="mt-2">Proveedor no encontrado</div>
+            <button class="btn btn-sm btn-warning mt-3" @onclick="Volver">Volver a la lista</button>
+        </div>
+    }
+    else
+    {
+        <!-- Tarjeta de información principal -->
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Información del proveedor -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información del Proveedor</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Nombre:</label>
+                                    <p class="form-control-plaintext">@proveedor.Nombre</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">CUIT:</label>
+                                    <p class="form-control-plaintext">@proveedor.CUIT</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Estado:</label>
+                                    <span class="badge @(proveedor.Estado == "Activo" ? "bg-success" : "bg-warning")">
+                                        @proveedor.Estado
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Contacto:</label>
+                                    <div class="form-control-plaintext">
+                                        @if (!string.IsNullOrEmpty(proveedor.Telefono))
+                                        {
+                                            <div><i class="fas fa-phone me-2 text-muted"></i>@proveedor.Telefono</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(proveedor.Email))
+                                        {
+                                            <div><i class="fas fa-envelope me-2 text-muted"></i>@proveedor.Email</div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Dirección:</label>
+                                    <p class="form-control-plaintext">@(string.IsNullOrEmpty(proveedor.Direccion) ? "No especificada" : proveedor.Direccion)</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Productos que suministra -->
+                        <div class="mt-4">
+                            <label class="form-label fw-bold">Productos que suministra:</label>
+                            @if (!string.IsNullOrEmpty(proveedor.Productos))
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var producto in proveedor.Productos.Split(','))
+                                    {
+                                        <span class="badge bg-info text-white">
+                                            @producto.Trim()
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No hay productos registrados</p>
+                            }
+                        </div>
+
+                        <!-- Notas -->
+                        @if (!string.IsNullOrEmpty(proveedor.Notas))
+                        {
+                            <div class="mt-4">
+                                <label class="form-label fw-bold">Notas:</label>
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        @proveedor.Notas
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Historial de compras -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Compras</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (compras == null || !compras.Any())
+                        {
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>No hay compras registradas para este proveedor.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Fecha</th>
+                                            <th>Productos</th>
+                                            <th>Cantidad Total</th>
+                                            <th>Monto Total</th>
+                                            <th>Observaciones</th>
+                                            <th class="text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var compra in compras)
+                                        {
+                                            <tr>
+                                                <td class="align-middle">
+                                                    <small class="text-muted">#@compra.Id</small>
+                                                </td>
+                                                <td class="align-middle">
+                                                    <span class="badge bg-light text-dark">
+                                                        @compra.FechaCompra
+                                                    </span>
+                                                </td>
+                                                <td class="align-middle">
+                                                    @if (compra.DetallesCompra != null && compra.DetallesCompra.Any())
+                                                    {
+                                                        <div class="d-flex flex-wrap gap-1">
+                                                            @foreach (var detalle in compra.DetallesCompra.Take(2))
+                                                            {
+                                                                <small class="badge bg-light text-dark">
+                                                                    @(detalle.Cantidad)x
+                                                                </small>
+                                                            }
+                                                            @if (compra.DetallesCompra.Count > 2)
+                                                            {
+                                                                <small class="badge bg-light text-dark">
+                                                                    +@(compra.DetallesCompra.Count - 2) más
+                                                                </small>
+                                                            }
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">Sin detalles</span>
+                                                    }
+                                                </td>
+                                                <td class="align-middle">
+                                                    @(compra.DetallesCompra?.Sum(d => d.Cantidad) ?? 0)
+                                                </td>
+                                                <td class="align-middle fw-bold">
+                                                    @{
+                                                        var total = compra.DetallesCompra?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0;
+                                                    }
+                                                    $@total.ToString("N2")
+                                                </td>
+                                                <td class="align-middle">
+                                                    @if (!string.IsNullOrEmpty(compra.Observaciones))
+                                                    {
+                                                        <small>@compra.Observaciones</small>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
+                                                <td class="align-middle text-center">
+                                                    <button class="btn btn-sm btn-outline-info"
+                                                            @onclick="() => VerDetalleCompra(compra.Id)"
+                                                            title="Ver detalles de compra">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-warning ms-1"
+                                                            @onclick="() => EditarCompra(compra.Id)"
+                                                            title="Editar compra">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Resumen de compras -->
+                            <div class="row mt-4">
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title text-muted">Total Compras</h6>
+                                            <h4 class="fw-bold">@compras.Count</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title text-muted">Total Productos</h6>
+                                            <h4 class="fw-bold">@(compras.Sum(c => c.DetallesCompra?.Sum(d => d.Cantidad) ?? 0))</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title text-muted">Monto Total</h6>
+                                            <h4 class="fw-bold text-success">
+                                                $@(compras.Sum(c => c.DetallesCompra?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0).ToString("N2"))
+                                            </h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title text-muted">Promedio</h6>
+                                            <h4 class="fw-bold text-info">
+                                                $@((compras.Any() ? compras.Average(c => c.DetallesCompra?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0) : 0).ToString("N2"))
+                                            </h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar con estadísticas -->
+            <div class="col-lg-4">
+                <!-- Estadísticas rápidas -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estadísticas</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-calendar-day me-2 text-primary"></i>Última compra:</span>
+                                <span class="fw-bold">
+                                    @if (compras != null && compras.Any())
+                                    {
+                                        var ultimaCompra = compras.OrderByDescending(c => c.FechaCompra).FirstOrDefault();
+                                        @ultimaCompra?.FechaCompra
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </span>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-shopping-cart me-2 text-success"></i>Compras este mes:</span>
+                                <span class="fw-bold">
+                                    @{
+                                        var mesActual = DateTime.Now.ToString("yyyy-MM");
+                                        var comprasEsteMes = compras?.Count(c => !string.IsNullOrEmpty(c.FechaCompra) && c.FechaCompra.StartsWith(mesActual)) ?? 0;
+                                    }
+                                    @comprasEsteMes
+                                </span>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-money-bill-wave me-2 text-warning"></i>Gasto promedio:</span>
+                                <span class="fw-bold">
+                                    @if (compras != null && compras.Any())
+                                    {
+                                        var promedio = compras.Average(c => c.DetallesCompra?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0);
+                                        <span>$@promedio.ToString("N2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">$0.00</span>
+                                    }
+                                </span>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-boxes me-2 text-danger"></i>Productos distintos:</span>
+                                <span class="fw-bold">
+                                    @if (!string.IsNullOrEmpty(proveedor.Productos))
+                                    {
+                                        @proveedor.Productos.Split(',').Length
+                                    }
+                                    else
+                                    {
+                                        <span>0</span>
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Frecuencia de compras -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Frecuencia de Compras</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (compras == null || compras.Count < 2)
+                        {
+                            <p class="text-muted text-center">Insuficientes datos para calcular frecuencia</p>
+                        }
+                        else
+                        {
+                            // Intentar parsear fechas, si falla usar strings
+                            var fechasStrings = compras
+                            .Where(c => !string.IsNullOrEmpty(c.FechaCompra))
+                            .Select(c => c.FechaCompra)
+                            .OrderBy(d => d)
+                            .ToList();
+
+                            if (fechasStrings.Count >= 2)
+                            {
+                                // Calcular días entre fechas si están en formato válido
+                                int totalDias = 0;
+                                int comparacionesValidas = 0;
+
+                                for (int i = 1; i < fechasStrings.Count; i++)
+                                {
+                                    if (DateTime.TryParse(fechasStrings[i], out var fechaActual) &&
+                                    DateTime.TryParse(fechasStrings[i - 1], out var fechaAnterior))
+                                    {
+                                        totalDias += (fechaActual - fechaAnterior).Days;
+                                        comparacionesValidas++;
+                                    }
+                                }
+
+                                if (comparacionesValidas > 0)
+                                {
+                                    var promedioDias = totalDias / comparacionesValidas;
+
+                                    <div class="text-center">
+                                        <div class="display-4 fw-bold text-success">@promedioDias</div>
+                                        <p class="text-muted mb-0">días promedio entre compras</p>
+                                        <hr class="my-3">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Basado en @compras.Count compras
+                                        </small>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted text-center">Formato de fechas no válido</p>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted text-center">Insuficientes fechas válidas</p>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <!-- Acciones rápidas -->
+                <!-- Acciones rápidas -->
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <!-- Nueva Compra -->
+                            <button class="btn btn-primary d-flex align-items-center justify-content-center"
+                                    @onclick="() => NuevaCompra(proveedor.Id)">
+                                <i class="fas fa-cart-plus me-2"></i>
+                                <span>Nueva Compra</span>
+                            </button>
+
+                            <!-- Enviar Mensaje -->
+                            <button class="btn btn-outline-success d-flex align-items-center justify-content-center"
+                                    @onclick="() => EnviarMensaje(proveedor)">
+                                <i class="fas fa-envelope me-2"></i>
+                                <span>Enviar Mensaje</span>
+                            </button>
+
+                            <!-- Eliminar Proveedor -->
+                            <button class="btn btn-outline-danger d-flex align-items-center justify-content-center"
+                                    @onclick="() => EliminarProveedor(proveedor.Id)">
+                                <i class="fas fa-trash-alt me-2"></i>
+                                <span>Eliminar Proveedor</span>
+                            </button>
+
+                            <!-- Ver Reporte -->
+                            <button class="btn btn-outline-info d-flex align-items-center justify-content-center"
+                                    @onclick="() => GenerarReporte(proveedor.Id)">
+                                <i class="fas fa-chart-line me-2"></i>
+                                <span>Generar Reporte</span>
+                            </button>
+
+                            <!-- Historial Completo -->
+                            <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center"
+                                    @onclick="() => VerHistorialCompleto(proveedor.Id)">
+                                <i class="fas fa-history me-2"></i>
+                                <span>Historial Completo</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ProveedorDTO? proveedor;
+    private List<CompraProveedorDTO> compras = new();
+    private bool cargando = true;
+    private string mensajeError = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        try
+        {
+            // Cargar proveedor
+            var respuestaProveedor = await ProveedorService.Get(Id);
+            if (respuestaProveedor.Error || respuestaProveedor.Respuesta == null)
+            {
+                mensajeError = await respuestaProveedor.ObtenerError() ?? "No se pudo cargar la información del proveedor";
+                cargando = false;
+                StateHasChanged();
+                return;
+            }
+
+            proveedor = respuestaProveedor.Respuesta;
+
+            // Cargar compras del proveedor
+            var respuestaCompras = await CompraProveedorService.GetByProveedor(Id);
+            if (!respuestaCompras.Error && respuestaCompras.Respuesta != null)
+            {
+                compras = respuestaCompras.Respuesta;
+            }
+            else if (respuestaCompras.Error)
+            {
+                // Si hay error al cargar compras, continuar con proveedor vacío
+                compras = new List<CompraProveedorDTO>();
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al cargar los datos: {ex.Message}";
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void Volver() => Navigation.NavigateTo("/proveedores");
+    private void EditarProveedor(int id) => Navigation.NavigateTo($"/proveedores/editar/{id}");
+
+    private void NuevaCompra(int proveedorId)
+    {
+        // Redirigir a página de nueva compra (si existe)
+        // Si no existe, puedes crear un modal o página nueva
+        Navigation.NavigateTo($"/compras/nueva?proveedorId={proveedorId}");
+    }
+
+    private void VerDetalleCompra(int compraId)
+    {
+        // Redirigir a página de detalle de compra (si existe)
+        Navigation.NavigateTo($"/compras/detalles/{compraId}");
+    }
+
+    private void EditarCompra(int compraId)
+    {
+        // Redirigir a página de edición de compra (si existe)
+        Navigation.NavigateTo($"/compras/editar/{compraId}");
+    }
+
+    private async Task EnviarMensaje(ProveedorDTO proveedor)
+    {
+        if (!string.IsNullOrEmpty(proveedor.Email))
+        {
+            var mensaje = $"mailto:{proveedor.Email}?subject=Contacto%20desde%20GestionDespensa&body=Estimado%20{proveedor.Nombre},";
+            await JS.InvokeVoidAsync("open", mensaje, "_blank");
+        }
+        else if (!string.IsNullOrEmpty(proveedor.Telefono))
+        {
+            // Para teléfono, solo podemos sugerir llamar
+            await JS.InvokeVoidAsync("alert", $"El número de teléfono es: {proveedor.Telefono}\n\nPuedes llamar manualmente.");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", "El proveedor no tiene información de contacto");
+        }
+    }
+
+    private async Task EliminarProveedor(int id)
+    {
+        if (proveedor == null) return;
+
+        var confirmado = await JS.InvokeAsync<bool>("confirm",
+            $"¿Está seguro de eliminar al proveedor '{proveedor.Nombre}'?\n\n" +
+            "⚠️ Esta acción no se puede deshacer.");
+
+        if (confirmado)
+        {
+            var respuesta = await ProveedorService.Delete(id);
+            if (!respuesta.Error)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Proveedor eliminado exitosamente");
+                Navigation.NavigateTo("/proveedores");
+            }
+            else
+            {
+                var error = await respuesta.ObtenerError();
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {error}");
+            }
+        }
+    }
+    private async Task GenerarReporte(int proveedorId)
+    {
+        await JS.InvokeVoidAsync("alert", $"📊 Generando reporte para el proveedor {proveedorId}...");
+        // Aquí puedes implementar la lógica para generar reportes
+    }
+
+    private void VerHistorialCompleto(int proveedorId)
+    {
+        Navigation.NavigateTo($"/proveedores/historial/{proveedorId}");
+    }
+
+    private async Task EliminarCompra(int compraId)
+    {
+        var confirmado = await JS.InvokeAsync<bool>("confirm",
+            "¿Está seguro de eliminar esta compra?\n\nEsta acción no se puede deshacer.");
+
+        if (confirmado)
+        {
+            var respuesta = await CompraProveedorService.Delete(compraId);
+            if (!respuesta.Error)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ Compra eliminada exitosamente");
+                await CargarDatos(); // Recargar datos
+            }
+            else
+            {
+                var error = await respuesta.ObtenerError();
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {error}");
+            }
+        }
+    }
+
+    private async Task ImprimirCompra(int compraId)
+    {
+        await JS.InvokeVoidAsync("print", $"comprobante-{compraId}");
+        // O implementar lógica de impresión específica
+    }
+
+    private async Task ImprimirDetalles()
+    {
+        await JS.InvokeVoidAsync("print");
+        // O usar: window.print() para imprimir la página actual
+    }
+}

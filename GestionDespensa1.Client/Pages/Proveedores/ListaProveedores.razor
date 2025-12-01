@@ -7,17 +7,68 @@
 
 <PageTitle>Proveedores - GestionDespensa</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3><i class="fas fa-truck me-2"></i>Lista de Proveedores</h3>
-    <button class="btn btn-primary" @onclick="NuevoProveedor">
-        <i class="fas fa-plus me-1"></i> Nuevo Proveedor
-    </button>
+<!-- Encabezado principal -->
+<div class="mb-4">
+    <h1 class="h3 mb-0">
+        <i class="fas fa-truck me-2"></i>Proveedores
+    </h1>
 </div>
+
+<!-- Filtros y controles (como en la imagen) -->
+<div class="card mb-4 border-0 shadow-sm">
+    <div class="card-body py-3">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+               <div class="row">
+    <div class="col-md-4">
+        <div class="mb-2">
+            <label class="form-label fw-bold mb-1">Estado:</label>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-primary me-2" style="cursor: pointer;" 
+                      @onclick='() => FiltrarPorEstado("")'>
+                    Todos
+                </span>
+                <span class="badge bg-success me-2" style="cursor: pointer;" 
+                      @onclick='() => FiltrarPorEstado("Activo")'>
+                    Activo
+                </span>
+                <span class="badge bg-warning" style="cursor: pointer;" 
+                      @onclick='() => FiltrarPorEstado("Inactivo")'>
+                    Inactivo
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mb-2">
+            <label class="form-label fw-bold mb-1">Ordenar por:</label>
+            <select class="form-select form-select-sm" @bind="ordenamiento" @bind:after="OrdenarProveedores">
+                <option value="Nombre">Nombre</option>
+                <option value="Estado">Estado</option>
+                <option value="Productos">Productos</option>
+            </select>
+        </div>
+    </div>
+</div>
+                    
+               
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-primary" @onclick="NuevoProveedor">
+                    <i class="fas fa-plus me-1"></i> Nuevo Proveedor
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="my-4" />
 
 @if (cargando)
 {
-    <div class="alert alert-info text-center">
-        <i class="fas fa-spinner fa-spin me-2"></i>Cargando proveedores...
+    <div class="alert alert-info text-center py-4">
+        <i class="fas fa-spinner fa-spin me-2 fa-2x"></i>
+        <div class="mt-2">Cargando proveedores...</div>
     </div>
 }
 else if (!string.IsNullOrEmpty(mensajeError))
@@ -26,54 +77,102 @@ else if (!string.IsNullOrEmpty(mensajeError))
         <i class="fas fa-exclamation-triangle me-2"></i>@mensajeError
     </div>
 }
-else if (!proveedores.Any())
+else if (!proveedoresFiltrados.Any())
 {
-    <div class="alert alert-warning text-center">
-        <i class="fas fa-truck me-2"></i>No hay proveedores registrados
+    <div class="alert alert-warning text-center py-4">
+        <i class="fas fa-truck me-2 fa-2x"></i>
+        <div class="mt-2">No hay proveedores registrados</div>
     </div>
 }
 else
 {
-    <div class="card">
-        <div class="card-body">
+    <!-- Tabla de proveedores (estilo similar a la imagen) -->
+    <div class="card border-0 shadow">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <th>ID</th>
-                            <th>Nombre</th>
-                            <th>CUIT</th>
-                            <th>Teléfono</th>
-                            <th>Email</th>
-                            <th>Dirección</th>
-                            <th>Estado</th>
-                            <th class="text-center">Acciones</th>
+                            <th class="border-0 ps-4" style="width: 25%;">NOMBRE</th>
+                            <th class="border-0" style="width: 15%;">CUIT</th>
+                            <th class="border-0" style="width: 20%;">CONTACTO</th>
+                            <th class="border-0" style="width: 25%;">PRODUCTOS</th>
+                            <th class="border-0" style="width: 10%;">ESTADO</th>
+                            <th class="border-0 text-center" style="width: 15%;">ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var proveedor in proveedores)
+                        @foreach (var proveedor in proveedoresFiltrados)
                         {
-                            <tr>
-                                <td class="fw-bold">#@proveedor.Id</td>
-                                <td>@proveedor.Nombre</td>
-                                <td>@proveedor.CUIT</td>
-                                <td>@proveedor.Telefono</td>
-                                <td>@proveedor.Email</td>
-                                <td>@proveedor.Direccion</td>
+                            <tr class="@(proveedor.Estado == "Inactivo" ? "opacity-75" : "")">
+                                <td class="ps-4 fw-bold">
+                                    @proveedor.Nombre
+                                </td>
+                                <td>
+                                    @proveedor.CUIT
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(proveedor.Telefono) || !string.IsNullOrEmpty(proveedor.Email))
+                                    {
+                                        <div class="d-flex flex-column">
+                                            @if (!string.IsNullOrEmpty(proveedor.Telefono))
+                                            {
+                                                <span><i class="fas fa-phone me-2 text-muted"></i>@proveedor.Telefono</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(proveedor.Email))
+                                            {
+                                                <span><i class="fas fa-envelope me-2 text-muted"></i>@proveedor.Email</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Sin contacto</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(proveedor.Productos))
+                                    {
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach (var producto in proveedor.Productos.Split(',').Take(3))
+                                            {
+                                                <span class="badge bg-light text-dark border">
+                                                    @producto.Trim()
+                                                </span>
+                                            }
+                                            @if (proveedor.Productos.Split(',').Length > 3)
+                                            {
+                                                <span class="badge bg-light text-dark border">
+                                                    +@(proveedor.Productos.Split(',').Length - 3)
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Sin productos</span>
+                                    }
+                                </td>
                                 <td>
                                     <span class="badge @(proveedor.Estado == "Activo" ? "bg-success" : "bg-warning")">
                                         @proveedor.Estado
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-warning me-1" @onclick="() => EditarProveedor(proveedor.Id)"
-                                            title="Editar proveedor">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" @onclick="() => EliminarProveedor(proveedor.Id)"
-                                            title="Eliminar proveedor">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-info" @onclick="() => EditarProveedor(proveedor.Id)"
+                                                title="Editar proveedor">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" @onclick="() => VerDetalles(proveedor.Id)"
+                                                title="Ver detalles">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" @onclick="() => EliminarProveedor(proveedor.Id)"
+                                                title="Eliminar proveedor">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -82,12 +181,23 @@ else
             </div>
         </div>
     </div>
+
+    <!-- Contador de resultados -->
+    <div class="mt-3 text-end">
+        <small class="text-muted">
+            Mostrando @proveedoresFiltrados.Count de @proveedores.Count proveedores
+        </small>
+    </div>
 }
 
 @code {
     private List<ProveedorDTO> proveedores = new();
+    private List<ProveedorDTO> proveedoresFiltrados = new();
     private bool cargando = true;
     private string mensajeError = string.Empty;
+    private string filtroEstado = "";
+    private string ordenamiento = "Nombre";
+    private string terminoBusqueda = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -108,14 +218,80 @@ else
         else
         {
             proveedores = respuesta.Respuesta ?? new List<ProveedorDTO>();
+            AplicarFiltros();
         }
 
         cargando = false;
         StateHasChanged();
     }
 
+    private void AplicarFiltros()
+    {
+        // Filtrar por estado
+        if (!string.IsNullOrEmpty(filtroEstado))
+        {
+            proveedoresFiltrados = proveedores
+                .Where(p => p.Estado == filtroEstado)
+                .ToList();
+        }
+        else
+        {
+            proveedoresFiltrados = proveedores.ToList();
+        }
+
+        // Buscar por término
+        if (!string.IsNullOrEmpty(terminoBusqueda))
+        {
+            proveedoresFiltrados = proveedoresFiltrados
+                .Where(p => p.Nombre.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase) ||
+                           p.CUIT.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase) ||
+                           (p.Productos != null && p.Productos.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+
+        // Ordenar
+        OrdenarProveedores();
+    }
+
+    private void OrdenarProveedores()
+    {
+        switch (ordenamiento)
+        {
+            case "Nombre":
+                proveedoresFiltrados = proveedoresFiltrados
+                    .OrderBy(p => p.Nombre)
+                    .ToList();
+                break;
+            case "Estado":
+                proveedoresFiltrados = proveedoresFiltrados
+                    .OrderBy(p => p.Estado)
+                    .ThenBy(p => p.Nombre)
+                    .ToList();
+                break;
+            case "Productos":
+                proveedoresFiltrados = proveedoresFiltrados
+                    .OrderByDescending(p => p.Productos?.Split(',').Length ?? 0)
+                    .ThenBy(p => p.Nombre)
+                    .ToList();
+                break;
+        }
+    }
+
+    private void FiltrarPorEstado(string estado)
+    {
+        filtroEstado = estado;
+        AplicarFiltros();
+        StateHasChanged();
+    }
+
     private void NuevoProveedor() => Navigation.NavigateTo("/proveedores/nuevo");
     private void EditarProveedor(int id) => Navigation.NavigateTo($"/proveedores/editar/{id}");
+
+    private void VerDetalles(int id)
+    {
+        // Aquí puedes implementar la vista de detalles si la necesitas
+        Navigation.NavigateTo($"/proveedores/detalles/{id}");
+    }
 
     private async Task EliminarProveedor(int id)
     {
@@ -123,7 +299,7 @@ else
         if (proveedor == null) return;
 
         var confirmado = await JS.InvokeAsync<bool>("confirm",
-            $"¿Está seguro de eliminar al proveedor '{proveedor.Nombre}'?");
+            $"¿Está seguro de eliminar al proveedor '{proveedor.Nombre}'?\n\nEsta acción no se puede deshacer.");
 
         if (confirmado)
         {
@@ -136,6 +312,7 @@ else
             else
             {
                 mensajeError = await respuesta.ObtenerError();
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {mensajeError}");
             }
         }
     }
