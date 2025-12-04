@@ -14,7 +14,11 @@
         <button class="btn btn-primary me-2" @onclick="NuevoProducto">
             <i class="bi bi-plus me-1"></i> Nuevo Producto
         </button>
-        <button class="btn btn-outline-warning" @onclick="VerStockBajo" title="Ver productos con stock bajo">
+        <button class="btn @(filtroActivo == "todos" ? "btn-info" : "btn-outline-info") me-2"
+                @onclick="VerTodos">
+            <i class="bi bi-list me-1"></i> Mostrar Todos
+        </button>
+        <button class="btn @(filtroActivo == "stockBajo" ? "btn-warning" : "btn-outline-warning")" @onclick="VerStockBajo" title="Ver productos con stock bajo">
             <i class="bi bi-exclamation-triangle me-1"></i> Stock Bajo
         </button>
     </div>
@@ -153,6 +157,7 @@ else
     private List<CategoriaDTO> categorias = new();
     private bool cargando = true;
     private string mensajeError = string.Empty;
+    private string filtroActivo = "todos";
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,8 +165,35 @@ else
         await CargarCategorias();
     }
 
+    private async Task VerTodos()
+    {
+        filtroActivo = "todos";
+        await CargarProductos(); 
+    }
+
+    private async Task VerStockBajo()
+    {
+        filtroActivo = "stockBajo";
+        cargando = true;
+        StateHasChanged();
+
+        var respuesta = await ProductoService.GetStockBajo();
+        if (!respuesta.Error)
+        {
+            productos = respuesta.Respuesta ?? new List<ProductoDTO>();
+        }
+        else
+        {
+            mensajeError = await respuesta.ObtenerError();
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
     private async Task CargarProductos()
     {
+        filtroActivo = "todos";
         cargando = true;
         StateHasChanged();
 
@@ -207,24 +239,6 @@ else
     private void NuevoProducto() => Navigation.NavigateTo("/productos/nuevo");
     private void EditarProducto(int id) => Navigation.NavigateTo($"/productos/editar/{id}");
 
-    private async Task VerStockBajo()
-    {
-        cargando = true;
-        StateHasChanged();
-
-        var respuesta = await ProductoService.GetStockBajo();
-        if (!respuesta.Error)
-        {
-            productos = respuesta.Respuesta ?? new List<ProductoDTO>();
-        }
-        else
-        {
-            mensajeError = await respuesta.ObtenerError();
-        }
-
-        cargando = false;
-        StateHasChanged();
-    }
 
     private async Task EliminarProducto(int id)
     {

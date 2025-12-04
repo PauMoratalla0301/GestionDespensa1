@@ -266,7 +266,64 @@ namespace GestionDespensa1.Server.Controllers
                 return BadRequest(e.Message);
             }
         }
+        [HttpGet("GetResumenPorFecha/{fecha}")]
+        public async Task<ActionResult<ResumenVentasDTO>> GetResumenPorFecha(DateTime fecha)
+        {
+            try
+            {
+                Console.WriteLine($"📊 Buscando resumen de ventas por fecha: {fecha:yyyy-MM-dd}");
 
+                // Obtener ventas del día usando tu repositorio
+                var ventasDelDia = await _repositorio.GetByFecha(fecha);
+
+                // Filtrar solo ventas completadas/pagadas (ajusta según tus estados)
+                var ventasCompletadas = ventasDelDia
+                    .Where(v => v.Estado == "Completada" ||
+                               v.Estado == "Pagado" ||
+                               v.Estado == "Finalizada" ||
+                               v.Estado == "Entregada") // Agrega los estados que uses
+                    .ToList();
+
+                Console.WriteLine($"📈 Ventas del día: {ventasCompletadas.Count} completadas de {ventasDelDia.Count} totales");
+
+                // Calcular resumen
+                var resumen = new ResumenVentasDTO
+                {
+                    TotalVentas = ventasCompletadas.Sum(v => v.Total),
+                    TotalEfectivo = ventasCompletadas.Where(v => v.MetodoPago == "Efectivo").Sum(v => v.Total),
+                    TotalTarjeta = ventasCompletadas.Where(v => v.MetodoPago == "Tarjeta").Sum(v => v.Total),
+                    TotalTransferencia = ventasCompletadas.Where(v => v.MetodoPago == "Transferencia").Sum(v => v.Total),
+                    CantidadVentas = ventasCompletadas.Count,
+                    ImporteInicio = 0, // Se establecerá desde el frontend
+                    TotalEgresos = 0   // Se establecerá desde el frontend
+                };
+
+                // Log para debugging
+                Console.WriteLine($"💰 Resumen calculado:");
+                Console.WriteLine($"   - Total Ventas: {resumen.TotalVentas:C}");
+                Console.WriteLine($"   - Efectivo: {resumen.TotalEfectivo:C}");
+                Console.WriteLine($"   - Tarjeta: {resumen.TotalTarjeta:C}");
+                Console.WriteLine($"   - Transferencia: {resumen.TotalTransferencia:C}");
+                Console.WriteLine($"   - Cantidad: {resumen.CantidadVentas}");
+
+                // Validar que la suma de medios de pago coincida con el total
+                var sumaMedios = resumen.TotalEfectivo + resumen.TotalTarjeta + resumen.TotalTransferencia;
+                var diferencia = Math.Abs(resumen.TotalVentas - sumaMedios);
+
+                if (diferencia > 0.01m)
+                {
+                    Console.WriteLine($"⚠️  Advertencia: Diferencia en medios de pago: {diferencia:C}");
+                }
+
+                return Ok(resumen);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error en GetResumenPorFecha {fecha:yyyy-MM-dd}: {ex.Message}");
+                Console.WriteLine($"📋 Stack: {ex.StackTrace}");
+                return StatusCode(500, $"Error interno del servidor: {ex.Message}");
+            }
+        }
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> Delete(int id)
         {

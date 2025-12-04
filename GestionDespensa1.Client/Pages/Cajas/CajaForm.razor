@@ -1,5 +1,6 @@
 ﻿@page "/cajas/nuevo"
 @page "/cajas/editar/{Id:int}"
+@page "/cajas/detalles/{Id:int}"
 @using GestionDespensa1.Shared.DTO
 @using GestionDespensa1.Client.Servicios.Entidades
 @inject ICajaService CajaService
@@ -240,17 +241,59 @@
         if (Id == 0) return;
 
         resumenCargando = true;
-        // Aquí llamarías a tu servicio para obtener el resumen de ventas del día
-        // Por ahora simulamos datos
-        resumenVentas.TotalVentas = 25000.00m;
-        resumenVentas.TotalEfectivo = 150000.00m;
-        resumenVentas.TotalTarjeta = 55000.00m;
-        resumenVentas.TotalTransferencia = 45000.00m;
-        resumenVentas.CantidadVentas = 25;
-        resumenVentas.ImporteInicio = caja.ImporteInicio;
-        resumenVentas.TotalEgresos = 30000.00m;
-        resumenVentas.ImporteCierre = caja.ImporteCierre;
+        StateHasChanged();
+
+        try
+        {
+            // Obtener la fecha de la caja actual
+            var fechaCaja = caja.Fecha.Date;
+
+            // Llamar al servicio REAL
+            var respuesta = await VentaService.GetResumenPorFecha(fechaCaja);
+
+            if (!respuesta.Error && respuesta.Respuesta != null)
+            {
+                resumenVentas = respuesta.Respuesta;
+                // Establecer el importe de inicio desde la caja
+                resumenVentas.ImporteInicio = caja.ImporteInicio;
+                resumenVentas.ImporteCierre = caja.ImporteCierre;
+            }
+            else
+            {
+                // En caso de error, mostrar datos vacíos pero reales
+                await JS.InvokeVoidAsync("alert", "⚠️ No se pudieron cargar las ventas del día");
+
+                resumenVentas.TotalVentas = 0;
+                resumenVentas.TotalEfectivo = 0;
+                resumenVentas.TotalTarjeta = 0;
+                resumenVentas.TotalTransferencia = 0;
+                resumenVentas.CantidadVentas = 0;
+                resumenVentas.ImporteInicio = caja.ImporteInicio;
+                resumenVentas.TotalEgresos = 0;
+                resumenVentas.ImporteCierre = caja.ImporteCierre;
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error al cargar resumen: {ex.Message}");
+
+            // Datos por defecto en caso de error
+            resumenVentas.TotalVentas = 0;
+            resumenVentas.TotalEfectivo = 0;
+            resumenVentas.TotalTarjeta = 0;
+            resumenVentas.TotalTransferencia = 0;
+            resumenVentas.CantidadVentas = 0;
+            resumenVentas.ImporteInicio = caja.ImporteInicio;
+            resumenVentas.TotalEgresos = 0;
+            resumenVentas.ImporteCierre = caja.ImporteCierre;
+        }
+
         resumenCargando = false;
+        StateHasChanged();
+    }
+    private async Task RecalcularTotales()
+    {
+        await CargarResumenVentas();
         StateHasChanged();
     }
 
@@ -303,11 +346,24 @@
     {
         if (!caja.ImporteCierre.HasValue || caja.ImporteCierre <= 0)
         {
-            await JS.InvokeVoidAsync("alert", "Debe ingresar el importe de cierre");
+            await JS.InvokeVoidAsync("alert", "❌ Debe ingresar el efectivo real contado");
             return;
         }
 
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Está seguro de que desea cerrar la caja? Esta acción no se puede deshacer."))
+        if (!resumenVentas.ValidacionMediosPago)
+        {
+            await JS.InvokeVoidAsync("alert", "❌ No puede cerrar la caja hasta que los totales de medios de pago coincidan");
+            return;
+        }
+
+        // Actualizar el importe de cierre en el resumen para calcular diferencia
+        resumenVentas.ImporteCierre = caja.ImporteCierre;
+
+        var mensajeConfirmacion = resumenVentas.Diferencia >= 0 ?
+            $"✅ Caja con SOBRANTE de {resumenVentas.Diferencia.ToString("C")}. ¿Continuar?" :
+            $"⚠️ Caja con FALTANTE de {Math.Abs(resumenVentas.Diferencia).ToString("C")}. ¿Está seguro de continuar?";
+
+        if (!await JS.InvokeAsync<bool>("confirm", mensajeConfirmacion))
         {
             return;
         }

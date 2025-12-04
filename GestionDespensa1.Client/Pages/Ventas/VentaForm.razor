@@ -5,6 +5,7 @@
 @inject IVentaService VentaService
 @inject IClienteService ClienteService
 @inject IProductoService ProductoService
+@inject ICategoriaService CategoriaService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
@@ -56,6 +57,13 @@
                             </div>
                             <div class="form-text text-muted">
                                 Seleccione "Cliente ocasional" para ventas sin datos del cliente
+                                @* @if (ClienteOcasionalConSaldoPendiente)
+                                {
+                                    <span class="text-danger d-block mt-1">
+                                        <i class="bi bi-exclamation-circle"></i>
+                                        Cliente ocasional no puede tener saldo pendiente
+                                    </span>
+                                } *@
                             </div>
                         </div>
                     </div>
@@ -266,8 +274,6 @@
             </EditForm>
         }
     </div>
-
-
 </div>
 
 <!-- Modal para productos existentes -->
@@ -366,6 +372,26 @@
                         <label class="form-label fw-bold">Nombre del Producto *</label>
                         <input type="text" @bind="productoNuevoNombre" class="form-control"
                                placeholder="Ingrese el nombre del producto" />
+                        @if (!string.IsNullOrWhiteSpace(productoNuevoNombre) && productoNuevoNombre.Length > 45)
+                        {
+                            <small class="text-danger">Máximo 45 caracteres</small>
+                        }
+                    </div>
+
+                    <!-- Campo para seleccionar categoría -->
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-bold">Categoría *</label>
+                        <select @bind="productoNuevoCategoriaId" class="form-control">
+                            <option value="0">Seleccione una categoría</option>
+                            @foreach (var categoria in categoriasDisponibles)
+                            {
+                                <option value="@categoria.Id">@categoria.NombreCategoria</option>
+                            }
+                        </select>
+                        @if (productoNuevoCategoriaId == 0)
+                        {
+                            <small class="text-danger">Seleccione una categoría</small>
+                        }
                     </div>
 
                     <div class="row">
@@ -376,23 +402,62 @@
                                        value="@productoNuevoCantidad"
                                        @oninput="@(e => OnCantidadProductoNuevoChanged(e))"
                                        min="1" class="form-control" />
+                                @if (productoNuevoCantidad <= 0)
+                                {
+                                    <small class="text-danger">La cantidad debe ser mayor a 0</small>
+                                }
                             </div>
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Precio Final *</label>
                                 <input type="number"
                                        value="@productoNuevoPrecio"
                                        @oninput="@(e => OnPrecioProductoNuevoChanged(e))"
                                        step="0.01" min="0" class="form-control" />
+                                @if (productoNuevoPrecio <= 0)
+                                {
+                                    <small class="text-danger">El precio debe ser mayor a 0</small>
+                                }
+                            </div>
+                        </div>
+
+
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">% Ganancia *</label>
+                                <div class="input-group">
+                                    <input type="number"
+                                           value="@productoNuevoGananciaPorcentaje"
+                                           @oninput="@(e => OnGananciaPorcentajeChanged(e))"
+                                           step="0.1" min="0" max="1000" class="form-control" />
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                @if (productoNuevoGananciaPorcentaje < 0)
+                                {
+                                    <small class="text-danger">El % ganancia no puede ser negativo</small>
+                                }
                             </div>
                         </div>
                     </div>
 
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label fw-bold">Stock Mínimo *</label>
+                                <input type="number"
+                                       value="@productoNuevoStockMinimo"
+                                       @oninput="@(e => OnStockMinimoProductoNuevoChanged(e))"
+                                       min="1" class="form-control" />
+                                <small class="text-muted">Cantidad mínima en inventario</small>
+                            </div>
+                        </div>
+                    </div>
                     <div class="alert alert-info">
                         <strong>Subtotal: $@SubtotalProductoNuevo.ToString("F2")</strong>
                     </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="@VolverAProductoExistente">Volver</button>
@@ -532,6 +597,7 @@
 
     private List<ClienteDTO> clientes = new();
     private List<ProductoDTO> productosDisponibles = new();
+    private List<CategoriaDTO> categoriasDisponibles = new();
     private List<DetalleVentaDTO> detallesVenta = new();
 
     // Variables para el modal de productos existentes
@@ -545,6 +611,9 @@
     private string productoNuevoNombre = "";
     private int productoNuevoCantidad = 1;
     private decimal productoNuevoPrecio = 0;
+    private int productoNuevoCategoriaId = 0;
+    private decimal productoNuevoGananciaPorcentaje = 0;
+    private int productoNuevoStockMinimo = 5; // Valor por defecto
 
     // Variables para el modal de nuevo cliente 
     private bool mostrarModalCliente = false;
@@ -555,6 +624,7 @@
     private bool cargando = false;
     private bool clientesCargando = true;
     private bool productosCargando = true;
+    private bool categoriasCargando = true;
 
     // Propiedades computadas
     private string Titulo => Id == 0 ? "Nueva Venta" : "Editar Venta";
@@ -570,17 +640,60 @@
                                         TieneStockSuficiente() &&
                                         SubtotalModal > 0;
     private bool PuedeAgregarProductoNuevo => !string.IsNullOrWhiteSpace(productoNuevoNombre) &&
-                                             productoNuevoCantidad > 0 &&
-                                             productoNuevoPrecio > 0;
+                                         productoNuevoNombre.Length <= 45 &&
+                                         productoNuevoCategoriaId > 0 &&
+                                         productoNuevoCantidad > 0 &&
+                                         productoNuevoPrecio > 0 &&
+                                         productoNuevoGananciaPorcentaje >= 0 && 
+                                         productoNuevoStockMinimo > 0;
 
     protected override async Task OnInitializedAsync()
     {
         await CargarClientes();
         await CargarProductos();
+        await CargarCategorias();
 
         if (Id > 0)
         {
             await CargarVenta();
+        }
+    }
+
+    // AGREGAR método para cargar categorías (llamarlo en OnInitializedAsync)
+    private async Task CargarCategorias()
+    {
+        categoriasCargando = true;
+        try
+        {
+            var respuesta = await CategoriaService.Get();
+            if (!respuesta.Error)
+            {
+                categoriasDisponibles = respuesta.Respuesta ?? new List<CategoriaDTO>();
+            }
+            else
+            {
+                // Si hay error, usar categorías de ejemplo
+                categoriasDisponibles = new List<CategoriaDTO>
+                {
+                    new CategoriaDTO { Id = 1, NombreCategoria = "Enlatados" },
+                    new CategoriaDTO { Id = 2, NombreCategoria = "Bebidas" },
+                    new CategoriaDTO { Id = 3, NombreCategoria = "Condimentos" },
+                    new CategoriaDTO { Id = 4, NombreCategoria = "Cereales" }
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error al cargar categorías: {ex.Message}");
+            categoriasDisponibles = new List<CategoriaDTO>
+            {
+                new CategoriaDTO { Id = 1, NombreCategoria = "General" }
+            };
+        }
+        finally
+        {
+            categoriasCargando = false;
+            StateHasChanged();
         }
     }
 
@@ -809,6 +922,9 @@
         productoNuevoNombre = "";
         productoNuevoCantidad = 1;
         productoNuevoPrecio = 0;
+        productoNuevoCategoriaId = 0;
+        productoNuevoGananciaPorcentaje = 0;
+        productoNuevoStockMinimo = 5;
         mostrarModalProductoNuevo = true;
         StateHasChanged();
     }
@@ -861,6 +977,18 @@
     {
         await InvokeAsync(StateHasChanged);
         ActualizarPagos();
+    }
+
+    private void OnGananciaPorcentajeChanged(ChangeEventArgs e)
+    {
+        productoNuevoGananciaPorcentaje = ParseDecimalCorregido(e.Value);
+        StateHasChanged();
+    }
+
+    private void OnStockMinimoProductoNuevoChanged(ChangeEventArgs e)
+    {
+        productoNuevoStockMinimo = ObtenerInt(e.Value);
+        StateHasChanged();
     }
 
     private void ActualizarPagos()
@@ -1003,11 +1131,42 @@
             return;
         }
 
-        if (productoNuevoCantidad <= 0 || productoNuevoPrecio <= 0)
+        if (productoNuevoNombre.Length > 45)
+        {
+            await JS.InvokeVoidAsync("alert", "El nombre del producto no puede tener más de 45 caracteres");
+            return;
+        }
+
+        if (productoNuevoCategoriaId == 0)
+        {
+            await JS.InvokeVoidAsync("alert", "Seleccione una categoría");
+            return;
+        }
+
+        if (productoNuevoCantidad <= 0)
         {
             await JS.InvokeVoidAsync("alert", "Cantidad y precio deben ser mayores a 0");
             return;
         }
+
+        if (productoNuevoPrecio <= 0)
+        {
+            await JS.InvokeVoidAsync("alert", "El precio final debe ser mayor a 0");
+            return;
+        }
+
+        if (productoNuevoGananciaPorcentaje < 0)
+        {
+            await JS.InvokeVoidAsync("alert", "El porcentaje de ganancia no puede ser negativo");
+            return;
+        }
+
+        if (productoNuevoStockMinimo <= 0)
+        {
+            await JS.InvokeVoidAsync("alert", "El stock mínimo debe ser mayor a 0");
+            return;
+        }
+
 
         try
         {
@@ -1015,11 +1174,11 @@
             var nuevoProducto = new CrearProductoDTO
             {
                 Descripcion = productoNuevoNombre.Trim(),
-                PrecioUnitario = productoNuevoPrecio,
+                PrecioUnitario = Math.Round(productoNuevoPrecio, 2),
                 StockActual = productoNuevoCantidad, // Usar la cantidad como stock inicial
-                StockMinimo = 5, // Stock mínimo por defecto - ajusta según mi sistema
-                GananciaPorcentaje = 0, // O calcular una ganancia por defecto
-                IdCategoria = 1, // Categoría por defecto - ajusta según tu sistema
+                StockMinimo = productoNuevoStockMinimo, // Stock mínimo por defecto - ajusta según mi sistema
+                GananciaPorcentaje = Math.Round(productoNuevoGananciaPorcentaje, 2), // O calcular una ganancia por defecto
+                IdCategoria = productoNuevoCategoriaId, // Categoría por defecto - ajusta según tu sistema
 
             };
 
@@ -1033,7 +1192,7 @@
                     IdProducto = respuesta.Respuesta, // ID del producto guardado
                     DescripcionProducto = productoNuevoNombre.Trim(),
                     Cantidad = productoNuevoCantidad,
-                    PrecioUnitario = productoNuevoPrecio,
+                    PrecioUnitario = Math.Round(productoNuevoPrecio, 2),
                     StockActual = productoNuevoCantidad
                 });
 
@@ -1047,7 +1206,8 @@
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", "❌ Error al guardar el producto en el catálogo");
+                var mensajeError = await respuesta.ObtenerError();
+                await JS.InvokeVoidAsync("alert", "❌  Error al guardar el producto: {mensajeError}");
             }
         }
         catch (Exception ex)

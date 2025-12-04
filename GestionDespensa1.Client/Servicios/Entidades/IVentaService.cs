@@ -13,6 +13,8 @@ namespace GestionDespensa1.Client.Servicios.Entidades
         Task<HttpRespuesta<int>> Insert(CrearVentaDTO venta);
         Task<HttpRespuesta<object>> Update(int id, VentaDTO venta);
         Task<HttpRespuesta<object>> Delete(int id);
-        Task<HttpRespuesta<ResumenVentasDTO>> GetResumenPorFecha(DateTime fecha); // Cambiado a HttpRespuesta
+        // NUEVO MÉTODO - Agregar esta línea
+        Task<HttpRespuesta<ResumenVentasDTO>> GetResumenPorFecha(DateTime fecha);
+
     }
 }

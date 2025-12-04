@@ -61,9 +61,9 @@ namespace GestionDespensa1.Client.Servicios.Entidades
             return await _httpServicio.Delete($"api/Ventas/{id}");
         }
 
-        public Task<HttpRespuesta<ResumenVentasDTO>> GetResumenPorFecha(DateTime fecha)
+        public async Task<HttpRespuesta<ResumenVentasDTO>> GetResumenPorFecha(DateTime fecha)
         {
-            throw new NotImplementedException();
+            return await _httpServicio.Get<ResumenVentasDTO>($"api/Ventas/GetResumenPorFecha/{fecha:yyyy-MM-dd}");
         }
     }
 }
