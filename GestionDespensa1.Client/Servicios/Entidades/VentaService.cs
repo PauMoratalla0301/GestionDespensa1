@@ -65,5 +65,61 @@ namespace GestionDespensa1.Client.Servicios.Entidades
         {
             return await _httpServicio.Get<ResumenVentasDTO>($"api/Ventas/GetResumenPorFecha/{fecha:yyyy-MM-dd}");
         }
+
+        public async Task<HttpRespuesta<bool>> SaldarVentaSimple(int id)
+        {
+            try
+            {
+                // Crear un objeto MINIMAL que seguro funcione
+                var datos = new
+                {
+                    Estado = "Pagado",
+                    MontoPagado = 0, // El backend calculará el total
+                    SaldoPendiente = 0
+                };
+
+                // Usar PATCH o PUT según lo que acepte tu backend
+                var respuesta = await _httpServicio.Put($"api/Ventas/{id}/saldar", datos);
+
+                if (!respuesta.Error && respuesta.HttpResponseMessage.IsSuccessStatusCode)
+                {
+                    return new HttpRespuesta<bool>(true, false, respuesta.HttpResponseMessage);
+                }
+                else
+                {
+                    // Si falla, intentar con PUT normal
+                    var ventaExistente = await Get(id);
+                    if (!ventaExistente.Error && ventaExistente.Respuesta != null)
+                    {
+                        var venta = ventaExistente.Respuesta;
+                        var ventaActualizada = new VentaDTO
+                        {
+                            Id = venta.Id,
+                            IdCliente = venta.IdCliente,
+                            FechaVenta = venta.FechaVenta,
+                            Estado = "Pagado",
+                            Total = venta.Total,
+                            MontoPagado = venta.Total,
+                            SaldoPendiente = 0,
+                            MetodoPago = venta.MetodoPago,
+                            Notas = venta.Notas
+                        };
+
+                        var respuesta2 = await Update(id, ventaActualizada);
+                        return new HttpRespuesta<bool>(
+                            !respuesta2.Error,
+                            respuesta2.Error,
+                            respuesta2.HttpResponseMessage
+                        );
+                    }
+
+                    return new HttpRespuesta<bool>(false, true, respuesta.HttpResponseMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                return new HttpRespuesta<bool>(false, true, null);
+            }
+        }
     }
 }

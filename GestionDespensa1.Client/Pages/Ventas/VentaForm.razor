@@ -57,13 +57,13 @@
                             </div>
                             <div class="form-text text-muted">
                                 Seleccione "Cliente ocasional" para ventas sin datos del cliente
-                                @* @if (ClienteOcasionalConSaldoPendiente)
+                                @if (venta.IdCliente == 0 && SaldoPendiente > 0)
                                 {
-                                    <span class="text-danger d-block mt-1">
-                                        <i class="bi bi-exclamation-circle"></i>
-                                        Cliente ocasional no puede tener saldo pendiente
-                                    </span>
-                                } *@
+                                    <div class="alert alert-danger mt-2 p-2">
+                                        <i class="bi bi-exclamation-circle me-2"></i>
+                                        <strong>ADVERTENCIA:</strong> Cliente ocasional no puede tener saldo pendiente
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -232,9 +232,25 @@
                             @if (SaldoPendiente > 0)
                             {
                                 <div class="text-center mt-3">
-                                    <button type="button" class="btn btn-success" @onclick="PagarTodo">
-                                        <i class="bi bi-credit-card me-1"></i> Pagar Todo ($@SaldoPendiente.ToString("F2"))
+                                    <button type="button" class="btn btn-success" @onclick="PagarTodo"
+                                            disabled="@(venta.IdCliente == 0 && SaldoPendiente > 0)">
+                                        <i class="bi bi-credit-card me-1"></i>
+                                        @if (venta.IdCliente == 0)
+                                        {
+                                            <span>Pago obligatorio completo ($@SaldoPendiente.ToString("F2"))</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Pagar Todo ($@SaldoPendiente.ToString("F2"))</span>
+                                        }
                                     </button>
+                                    @if (venta.IdCliente == 0 && SaldoPendiente > 0)
+                                    {
+                                        <small class="text-danger d-block mt-1">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            Para cliente ocasional, el pago debe ser completo
+                                        </small>
+                                    }
                                 </div>
                             }
                         </div>
@@ -411,18 +427,17 @@
 
                         <div class="col-md-4">
                             <div class="form-group mb-3">
-                                <label class="form-label fw-bold">Precio Final *</label>
+                                <label class="form-label fw-bold">Precio Unitario *</label>
                                 <input type="number"
-                                       value="@productoNuevoPrecio"
-                                       @oninput="@(e => OnPrecioProductoNuevoChanged(e))"
+                                       value="@productoNuevoPrecioUnitario"
+                                       @oninput="@(e => OnPrecioUnitarioProductoNuevoChanged(e))"
                                        step="0.01" min="0" class="form-control" />
-                                @if (productoNuevoPrecio <= 0)
+                                @if (productoNuevoPrecioUnitario <= 0)
                                 {
                                     <small class="text-danger">El precio debe ser mayor a 0</small>
                                 }
                             </div>
                         </div>
-
 
                         <div class="col-md-4">
                             <div class="form-group mb-3">
@@ -438,6 +453,34 @@
                                 {
                                     <small class="text-danger">El % ganancia no puede ser negativo</small>
                                 }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label class="form-label fw-bold">Precio Final Calculado</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text"
+                                           value="@productoNuevoPrecioFinal.ToString("F2")"
+                                           class="form-control bg-light" readonly />
+                                </div>
+                                <small class="text-muted">
+                                    Precio calculado: Precio Unitario + @productoNuevoGananciaPorcentaje% de ganancia
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="form-label fw-bold text-success">Ganancia</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text"
+                                           value="@productoNuevoGanancia.ToString("F2")"
+                                           class="form-control bg-light" readonly />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -610,9 +653,11 @@
     private bool mostrarModalProductoNuevo = false;
     private string productoNuevoNombre = "";
     private int productoNuevoCantidad = 1;
-    private decimal productoNuevoPrecio = 0;
+    private decimal productoNuevoPrecioUnitario = 0;
+    private decimal productoNuevoPrecioFinal = 0;
+    private decimal productoNuevoGanancia = 0;
     private int productoNuevoCategoriaId = 0;
-    private decimal productoNuevoGananciaPorcentaje = 0;
+    private decimal productoNuevoGananciaPorcentaje = 40;
     private int productoNuevoStockMinimo = 5; // Valor por defecto
 
     // Variables para el modal de nuevo cliente 
@@ -633,7 +678,7 @@
     private decimal TotalPagado => pagoEfectivo + pagoTransferencia + pagoTarjeta;
     private decimal SaldoPendiente => TotalVenta - TotalPagado;
     private decimal SubtotalModal => detalleSeleccionado.Cantidad * detalleSeleccionado.PrecioUnitario;
-    private decimal SubtotalProductoNuevo => productoNuevoCantidad * productoNuevoPrecio;
+    private decimal SubtotalProductoNuevo => productoNuevoCantidad * productoNuevoPrecioFinal;
     private bool PuedeAgregarProducto => detalleSeleccionado.IdProducto > 0 &&
                                         detalleSeleccionado.Cantidad > 0 &&
                                         detalleSeleccionado.PrecioUnitario > 0 &&
@@ -643,8 +688,9 @@
                                          productoNuevoNombre.Length <= 45 &&
                                          productoNuevoCategoriaId > 0 &&
                                          productoNuevoCantidad > 0 &&
-                                         productoNuevoPrecio > 0 &&
+                                         productoNuevoPrecioUnitario > 0 &&
                                          productoNuevoGananciaPorcentaje >= 0 && 
+                                         productoNuevoPrecioFinal > 0 &&
                                          productoNuevoStockMinimo > 0;
 
     protected override async Task OnInitializedAsync()
@@ -840,10 +886,41 @@
         StateHasChanged();
     }
 
-    private void OnPrecioProductoNuevoChanged(ChangeEventArgs e)
+    private void CalcularPrecioFinalProductoNuevo()
     {
-        productoNuevoPrecio = ParseDecimalCorregido(e.Value);
-        OnPagoChanged();
+        if (productoNuevoPrecioUnitario > 0 && productoNuevoGananciaPorcentaje >= 0)
+        {
+            // Calcular monto de ganancia
+            productoNuevoGanancia = productoNuevoPrecioUnitario * (productoNuevoGananciaPorcentaje / 100);
+
+            // Calcular precio final (precio unitario + ganancia)
+            productoNuevoPrecioFinal = productoNuevoPrecioUnitario + productoNuevoGanancia;
+        }
+        else
+        {
+            productoNuevoGanancia = 0;
+            productoNuevoPrecioFinal = 0;
+        }
+    }
+    // Método cuando cambia el precio unitario
+    private void OnPrecioUnitarioProductoNuevoChanged(ChangeEventArgs e)
+    {
+        productoNuevoPrecioUnitario = ParseDecimalCorregido(e.Value);
+        CalcularPrecioFinalProductoNuevo();
+        StateHasChanged();
+    }
+
+    private void OnClienteChanged(ChangeEventArgs e)
+    {
+        venta.IdCliente = ObtenerInt(e.Value);
+        StateHasChanged(); // Actualizar para mostrar/ocultar advertencia
+    }
+    // Método cuando cambia el % de ganancia (ACTUALIZADO)
+    private void OnGananciaPorcentajeChanged(ChangeEventArgs e)
+    {
+        productoNuevoGananciaPorcentaje = ParseDecimalCorregido(e.Value);
+        CalcularPrecioFinalProductoNuevo(); // ¡ESTO ES LO QUE FALTA!
+        StateHasChanged();
     }
 
     private decimal CalcularPrecioFinal(decimal precioUnitario, decimal gananciaPorcentaje)
@@ -921,9 +998,11 @@
     {
         productoNuevoNombre = "";
         productoNuevoCantidad = 1;
-        productoNuevoPrecio = 0;
+        productoNuevoPrecioUnitario = 0;
+        productoNuevoPrecioFinal = 0;
+        productoNuevoGanancia = 0;
         productoNuevoCategoriaId = 0;
-        productoNuevoGananciaPorcentaje = 0;
+        productoNuevoGananciaPorcentaje = 40;
         productoNuevoStockMinimo = 5;
         mostrarModalProductoNuevo = true;
         StateHasChanged();
@@ -979,11 +1058,12 @@
         ActualizarPagos();
     }
 
-    private void OnGananciaPorcentajeChanged(ChangeEventArgs e)
-    {
-        productoNuevoGananciaPorcentaje = ParseDecimalCorregido(e.Value);
-        StateHasChanged();
-    }
+    // private void OnGananciaPorcentajeChanged(ChangeEventArgs e)
+    // {
+    //     productoNuevoGananciaPorcentaje = ParseDecimalCorregido(e.Value);
+    //     CalcularPrecioFinalProductoNuevo();
+    //     StateHasChanged();
+    // }
 
     private void OnStockMinimoProductoNuevoChanged(ChangeEventArgs e)
     {
@@ -1032,21 +1112,30 @@
     {
         var saldoRestante = SaldoPendiente;
 
-        // Distribuir el saldo pendiente entre los métodos de pago
-        if (pagoEfectivo == 0 && pagoTransferencia == 0 && pagoTarjeta == 0)
+        // Si es cliente ocasional, asegurar que se pague TODO
+        if (venta.IdCliente == 0)
         {
-            // Si no hay pagos, poner todo en efectivo
-            pagoEfectivo = saldoRestante;
+            // Forzar pago completo en efectivo
+            pagoEfectivo += saldoRestante;
         }
         else
         {
-            // Distribuir proporcionalmente entre los métodos ya usados
-            var totalActual = TotalPagado;
-            if (totalActual > 0)
+            // Distribuir el saldo pendiente entre los métodos de pago
+            if (pagoEfectivo == 0 && pagoTransferencia == 0 && pagoTarjeta == 0)
             {
-                if (pagoEfectivo > 0) pagoEfectivo += (pagoEfectivo / totalActual) * saldoRestante;
-                if (pagoTransferencia > 0) pagoTransferencia += (pagoTransferencia / totalActual) * saldoRestante;
-                if (pagoTarjeta > 0) pagoTarjeta += (pagoTarjeta / totalActual) * saldoRestante;
+                // Si no hay pagos, poner todo en efectivo
+                pagoEfectivo = saldoRestante;
+            }
+            else
+            {
+                // Distribuir proporcionalmente entre los métodos ya usados
+                var totalActual = TotalPagado;
+                if (totalActual > 0)
+                {
+                    if (pagoEfectivo > 0) pagoEfectivo += (pagoEfectivo / totalActual) * saldoRestante;
+                    if (pagoTransferencia > 0) pagoTransferencia += (pagoTransferencia / totalActual) * saldoRestante;
+                    if (pagoTarjeta > 0) pagoTarjeta += (pagoTarjeta / totalActual) * saldoRestante;
+                }
             }
         }
 
@@ -1149,7 +1238,7 @@
             return;
         }
 
-        if (productoNuevoPrecio <= 0)
+        if (productoNuevoPrecioUnitario <= 0)
         {
             await JS.InvokeVoidAsync("alert", "El precio final debe ser mayor a 0");
             return;
@@ -1174,7 +1263,7 @@
             var nuevoProducto = new CrearProductoDTO
             {
                 Descripcion = productoNuevoNombre.Trim(),
-                PrecioUnitario = Math.Round(productoNuevoPrecio, 2),
+                PrecioUnitario = Math.Round(productoNuevoPrecioUnitario, 2),
                 StockActual = productoNuevoCantidad, // Usar la cantidad como stock inicial
                 StockMinimo = productoNuevoStockMinimo, // Stock mínimo por defecto - ajusta según mi sistema
                 GananciaPorcentaje = Math.Round(productoNuevoGananciaPorcentaje, 2), // O calcular una ganancia por defecto
@@ -1192,13 +1281,12 @@
                     IdProducto = respuesta.Respuesta, // ID del producto guardado
                     DescripcionProducto = productoNuevoNombre.Trim(),
                     Cantidad = productoNuevoCantidad,
-                    PrecioUnitario = Math.Round(productoNuevoPrecio, 2),
+                    PrecioUnitario = Math.Round(productoNuevoPrecioFinal, 2),
                     StockActual = productoNuevoCantidad
                 });
 
                 // 3. TERCERO: Recargar la lista de productos disponibles
                 await CargarProductos();
-
                 ActualizarTotales();
                 CerrarModalProductoNuevo();
 
@@ -1287,12 +1375,25 @@
         cargando = true;
         StateHasChanged();
 
-        if (!detallesVenta.Any())
+        if (venta.IdCliente == 0) // 0 = Cliente ocasional
         {
-            await JS.InvokeVoidAsync("alert", "Debe añadir al menos un producto a la venta.");
-            cargando = false;
-            StateHasChanged();
-            return;
+            if (SaldoPendiente > 0)
+            {
+                await JS.InvokeVoidAsync("alert",
+                    "❌ ERROR: No se puede vender a 'Cliente ocasional' con saldo pendiente.\n\n" +
+                    "Razón: No se puede confiar en un consumidor sin datos de contacto.\n" +
+                    "Por favor, seleccione un cliente registrado o complete el pago total.");
+
+                cargando = false;
+                StateHasChanged();
+                return; // Detener el proceso de guardado
+            }
+        }
+
+        // Si estamos editando y el saldo es 0, marcar como Pagado
+        if (Id > 0 && SaldoPendiente == 0)
+        {
+            venta.Estado = "Pagado";
         }
 
         // Si no hay cliente seleccionado (IdCliente = 0), se guarda como cliente ocasional
@@ -1314,10 +1415,9 @@
 
         if (Id == 0)
         {
-            //CORREGIR: Redondear todos los valores decimales a 2 decimales
             var crearVenta = new CrearVentaDTO
             {
-                IdCliente = ObtenerIdClienteValido(), // ← AQUÍ EL CAMBIO
+                IdCliente = ObtenerIdClienteValido(), 
                 FechaVenta = venta.FechaVenta,
                 Estado = venta.Estado,
                 Total = Math.Round(venta.Total, 2),
@@ -1329,7 +1429,7 @@
                 {
                     IdProducto = d.IdProducto,
                     Cantidad = d.Cantidad,
-                    PrecioUnitario = Math.Round(d.PrecioUnitario, 2),//Redondear precio unitario
+                    PrecioUnitario = Math.Round(d.PrecioUnitario, 2),
                 }).ToList()
             };
 
@@ -1343,17 +1443,17 @@
             {
                 
                 var mensajeError = await respuesta.ObtenerError();
-                // MEJORAR: Obtener más detalles del error
+                
                 await JS.InvokeVoidAsync("alert", $"❌ Error al crear venta: {mensajeError}");
                 Console.WriteLine($"Error detallado: {mensajeError}");
 
-                // También mostrar los datos que se están enviando
+                // mostrar los datos que se están enviando
                 Console.WriteLine($"DATOS ENVIADOS: Cliente: {crearVenta.IdCliente}, Total: {crearVenta.Total}, Productos: {crearVenta.DetallesVenta.Count}");
             }
         }
         else
         {
-            // Aplicar mismo redondeo para actualización
+            
             venta.Total = Math.Round(venta.Total, 2);
             venta.MontoPagado = Math.Round(venta.MontoPagado, 2);
             venta.SaldoPendiente = Math.Round(venta.SaldoPendiente, 2);
@@ -1382,6 +1482,7 @@
         cargando = false;
         StateHasChanged();
     }
-    
+        
+     
     private void Cancelar() => Navigation.NavigateTo("/ventas");
 }

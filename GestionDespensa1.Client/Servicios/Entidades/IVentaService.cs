@@ -15,6 +15,6 @@ namespace GestionDespensa1.Client.Servicios.Entidades
         Task<HttpRespuesta<object>> Delete(int id);
         // NUEVO MÉTODO - Agregar esta línea
         Task<HttpRespuesta<ResumenVentasDTO>> GetResumenPorFecha(DateTime fecha);
-
+        Task<HttpRespuesta<bool>> SaldarVentaSimple(int id);
     }
 }

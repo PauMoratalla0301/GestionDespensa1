@@ -14,10 +14,26 @@
         <button class="btn btn-primary me-2" @onclick="NuevaVenta">
             <i class="bi bi-plus me-1"></i> Nueva Venta
         </button>
-        <button class="btn btn-outline-warning" @onclick="VerConSaldoPendiente" title="Ver ventas con saldo pendiente">
-            <i class="bi bi-clock me-1"></i> Pendientes
-        </button>
     </div>
+</div>
+
+<!-- BOTONES DE FILTRO -->
+<div class="d-flex align-items-center mb-3">
+    <button class="btn @(filtroActivo == "todos" ? "btn-info" : "btn-outline-info") me-2"
+            @onclick="() => VerTodos()">
+        <i class="bi bi-list me-1"></i> Mostrar Todos
+    </button>
+    <button class="btn @(filtroActivo == "pendientes" ? "btn-warning" : "btn-outline-warning")"
+            @onclick="() => VerConSaldoPendiente()">
+        <i class="bi bi-clock me-1"></i> Pendientes
+    </button>
+
+    @if (!string.IsNullOrEmpty(filtroActivo) && filtroActivo != "todos")
+    {
+        <span class="ms-3 badge bg-secondary">
+            @ventas.Count venta(s) @(filtroActivo == "pendientes" ? "pendientes" : "")
+        </span>
+    }
 </div>
 
 @if (cargando)
@@ -36,6 +52,14 @@ else if (!ventas.Any())
 {
     <div class="alert alert-warning text-center">
         <i class="bi bi-cart me-2"></i>No hay ventas registradas
+        @if (filtroActivo == "pendientes")
+        {
+            <span>No hay ventas con saldo pendiente</span>
+        }
+        else
+        {
+            <span>No hay ventas registradas</span>
+        }
     </div>
 }
 else
@@ -56,43 +80,69 @@ else
                         </tr>
                     </thead>
                     <tbody>
+                       
                         @foreach (var venta in ventas)
                         {
                             <tr class="@(venta.SaldoPendiente > 0 ? "table-warning" : "")">
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="venta-badge me-3">
-                                            <i class="bi bi-calendar-check venta-icon"></i>
+                                        <div class="venta-badge me-2 @GetBadgeColorByEstado(venta.Estado)">
+                                            <i class="bi @GetIconoByEstado(venta.Estado) venta-icon"></i>
                                         </div>
-                                        <div class="fw-bold">@venta.FechaVenta.ToString("dd/MM/yyyy")</div>
+                                        <div>
+                                            <div class="fw-bold">@venta.FechaVenta.ToString("dd/MM/yyyy")</div>
+                                            <small class="text-muted">#@venta.Id</small>
+                                        </div>
                                     </div>
                                 </td>
-                                <td>@ObtenerNombreCliente(venta.IdCliente)</td>
-                                <td class="text-success fw-bold">@venta.Total.ToString("C")</td>
-                                <td>@venta.MontoPagado.ToString("C")</td>
                                 <td>
-                                    <span class="badge @(venta.SaldoPendiente > 0 ? "bg-danger" : "bg-success") fs-6">
-                                        @venta.SaldoPendiente.ToString("C")
-                                    </span>
+                                    <div>@ObtenerNombreCliente(venta.IdCliente)</div>
+                                    <small class="text-muted">@venta.MetodoPago</small>
+                                </td>
+                                <td class="text-success fw-bold">@venta.Total.ToString("C")</td>
+                                <td class="text-primary">@venta.MontoPagado.ToString("C")</td>
+                                <td>
+                                    @if (venta.SaldoPendiente > 0)
+                                    {
+                                        <span class="badge bg-danger fs-6">
+                                            @venta.SaldoPendiente.ToString("C")
+                                        </span>
+
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success fs-6">
+                                            @venta.SaldoPendiente.ToString("C")
+                                        </span>
+                                    }
                                 </td>
                                 <td>
-                                    <span class="badge @(venta.Estado == "Pagado" ? "bg-success" : "bg-warning") fs-6">
+                                    <span class="badge @GetEstadoBadgeClass(venta.Estado) fs-6">
                                         @venta.Estado
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-info me-1" @onclick="() => VerDetalles(venta.Id)"
-                                            title="Ver detalles">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-warning me-1" @onclick="() => EditarVenta(venta.Id)"
-                                            title="Editar venta">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" @onclick="() => EliminarVenta(venta.Id)"
-                                            title="Eliminar venta">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-info me-1" @onclick="() => VerDetalles(venta.Id)"
+                                                title="Ver detalles de la venta">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-warning me-1" @onclick="() => EditarVenta(venta.Id)"
+                                                title="Editar venta">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        @if (venta.SaldoPendiente > 0)
+                                        {
+                                            <button class="btn btn-success me-1" @onclick="() => SaldarVentaRapido(venta.Id)"
+                                                    title="Saldar venta pendiente">
+                                                <i class="bi bi-credit-card"></i>
+                                            </button>
+                                        }
+                                        <button class="btn btn-danger" @onclick="() => EliminarVenta(venta.Id)"
+                                                title="Eliminar venta">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -158,15 +208,123 @@ else
     private List<ClienteDTO> clientes = new();
     private bool cargando = true;
     private string mensajeError = string.Empty;
+    private string filtroActivo = "todos";
 
     protected override async Task OnInitializedAsync()
     {
         await CargarVentas();
         await CargarClientes();
     }
+    private string GetEstadoBadgeClass(string estado)
+    {
+        return estado switch
+        {
+            "Pagado" => "bg-success",
+            "Pendiente" => "bg-warning",
+            "Cancelado" => "bg-danger",
+            "Parcial" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetBadgeColorByEstado(string estado)
+    {
+        return estado switch
+        {
+            "Pagado" => "bg-success",
+            "Pendiente" => "bg-warning",
+            "Cancelado" => "bg-danger",
+            _ => "bg-primary"
+        };
+    }
+
+    private string GetIconoByEstado(string estado)
+    {
+        return estado switch
+        {
+            "Pagado" => "bi-check-circle",
+            "Pendiente" => "bi-clock",
+            "Cancelado" => "bi-x-circle",
+            "Parcial" => "bi-currency-dollar",
+            _ => "bi-cart"
+        };
+    }
+
+    // Método para mostrar TODAS las ventas
+    private async Task VerTodos()
+    {
+        filtroActivo = "todos";
+        await CargarVentas();
+    }
+
+    private async Task VerConSaldoPendiente()
+    {
+        filtroActivo = "pendientes";
+        cargando = true;
+        StateHasChanged();
+
+        var respuesta = await VentaService.GetConSaldoPendiente();
+        if (!respuesta.Error)
+        {
+            ventas = respuesta.Respuesta ?? new List<VentaDTO>();
+        }
+        else
+        {
+            mensajeError = await respuesta.ObtenerError();
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+    
+    private async Task SaldarVentaRapido(int id)
+    {
+        var venta = ventas.FirstOrDefault(v => v.Id == id);
+        if (venta == null || venta.SaldoPendiente <= 0) return;
+
+        var confirmar = await JS.InvokeAsync<bool>("confirm",
+            $"¿Saldar venta #{venta.Id}?\n\n" +
+            $"Cliente: {ObtenerNombreCliente(venta.IdCliente)}\n" +
+            $"Total: {venta.Total:C}\n" +
+            // $"Pagado: {venta.MontoPagado:C}\n" +
+            $"Saldo pendiente: {venta.SaldoPendiente:C}\n\n" +
+            $"¿Marcar como pagada completamente?");
+
+        if (!confirmar) return;
+
+        try
+        {
+            var respuesta = await VentaService.SaldarVentaSimple(id);
+
+            if (!respuesta.Error && respuesta.Respuesta)
+            {
+                await JS.InvokeVoidAsync("alert", "✅ ¡Venta saldada exitosamente!");
+
+                // Recargar según el filtro activo
+                if (filtroActivo == "pendientes")
+                {
+                    await VerConSaldoPendiente();
+                }
+                else
+                {
+                    await CargarVentas();
+                }
+            }
+            else
+            {
+                var mensajeError = await respuesta.ObtenerError();
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {mensajeError}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"💥 Error: {ex.Message}");
+        }
+    }
 
     private async Task CargarVentas()
     {
+        // filtroActivo = "todos";
         cargando = true;
         StateHasChanged();
 
@@ -203,25 +361,6 @@ else
     private void NuevaVenta() => Navigation.NavigateTo("/ventas/nuevo");
     private void EditarVenta(int id) => Navigation.NavigateTo($"/ventas/editar/{id}");
     private void VerDetalles(int id) => Navigation.NavigateTo($"/ventas/detalles/{id}");
-
-    private async Task VerConSaldoPendiente()
-    {
-        cargando = true;
-        StateHasChanged();
-
-        var respuesta = await VentaService.GetConSaldoPendiente();
-        if (!respuesta.Error)
-        {
-            ventas = respuesta.Respuesta ?? new List<VentaDTO>();
-        }
-        else
-        {
-            mensajeError = await respuesta.ObtenerError();
-        }
-
-        cargando = false;
-        StateHasChanged();
-    }
 
     private async Task EliminarVenta(int id)
     {
