@@ -1,5 +1,6 @@
 ﻿@page "/productos/nuevo"
 @page "/productos/editar/{Id:int}"
+@page "/productos/detalles/{Id:int}"
 @using GestionDespensa1.Shared.DTO
 @using GestionDespensa1.Client.Servicios.Entidades
 @inject IProductoService ProductoService
@@ -67,6 +68,7 @@
                             <ValidationMessage For="@(() => producto.PrecioUnitario)" class="text-danger small" />
                         </div>
                     </div>
+
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="ganancia" class="form-label fw-bold">% Ganancia *</label>
@@ -75,6 +77,30 @@
                             <ValidationMessage For="@(() => producto.GananciaPorcentaje)" class="text-danger small" />
                         </div>
                     </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold text-success">Precio de Venta</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" class="form-control"
+                                       value="@PrecioVentaCalculado.ToString("N2")"
+                                       readonly disabled />
+                            </div>
+                            <div class="form-text">Calculado automáticamente</div>
+                        </div>
+                    </div>
+
+                    @* <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="stockActual" class="form-label fw-bold">Stock Actual *</label>
+                            <InputNumber id="stockActual" @bind-Value="producto.StockActual" class="form-control"
+                                         min="0" />
+                            <ValidationMessage For="@(() => producto.StockActual)" class="text-danger small" />
+                        </div>
+                    </div> *@
+                </div>
+
+                <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="precioFinal" class="form-label fw-bold">Precio Final</label>
@@ -130,7 +156,11 @@
 @code {
     [Parameter] public int Id { get; set; }
 
-    private ProductoDTO producto = new();
+    private ProductoDTO producto = new()
+    {
+        PrecioUnitario = 0,
+        GananciaPorcentaje = 0
+    };
     private List<CategoriaDTO> categorias = new();
     private string Titulo => Id == 0 ? "Nuevo Producto" : "Editar Producto";
     private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
@@ -183,6 +213,23 @@
         StateHasChanged();
     }
 
+    private decimal PrecioVentaCalculado
+    {
+        get
+        {
+            if (producto.PrecioUnitario > 0 && producto.GananciaPorcentaje > 0)
+            {
+                return producto.PrecioUnitario + (producto.PrecioUnitario * producto.GananciaPorcentaje / 100);
+            }
+            return producto.PrecioUnitario;
+        }
+    }
+
+    private void ForzarActualizacion()
+    {
+        StateHasChanged();
+    }
+
     private async Task CargarProducto()
     {
         cargando = true;
@@ -207,12 +254,15 @@
         cargando = true;
         StateHasChanged();
 
+        producto.PrecioVenta = PrecioVentaCalculado;  // ← Guarda el precio con ganancia
+        
         if (Id == 0)
         {
             var crearProducto = new CrearProductoDTO
             {
                 Descripcion = producto.Descripcion,
                 PrecioUnitario = producto.PrecioUnitario,
+                PrecioVenta = producto.PrecioVenta,
                 GananciaPorcentaje = producto.GananciaPorcentaje,
                 StockActual = producto.StockActual,
                 StockMinimo = producto.StockMinimo,
@@ -232,6 +282,8 @@
         }
         else
         {
+            producto.PrecioVenta = PrecioVentaCalculado;
+
             var respuesta = await ProductoService.Update(Id, producto);
             if (!respuesta.Error)
             {
@@ -243,9 +295,9 @@
                 await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
             }
         }
-
         cargando = false;
         StateHasChanged();
+        
     }
 
     private void Cancelar() => Navigation.NavigateTo("/productos");

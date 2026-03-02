@@ -16,6 +16,8 @@ namespace GestionDespensa1.Shared.DTO
         [Required(ErrorMessage = "El precio unitario es obligatorio.")]
         public decimal PrecioUnitario { get; set; }
 
+        public decimal PrecioVenta { get; set; }
+
         [Required(ErrorMessage = "El porcentaje de ganancia es obligatorio.")]
         public decimal GananciaPorcentaje { get; set; }
 

@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace GestionDespensa1.BD.Migrations
 {
     /// <inheritdoc />
-    public partial class NuevaBase : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -20,6 +22,9 @@ namespace GestionDespensa1.BD.Migrations
                     IdUsuario = table.Column<string>(type: "nvarchar(45)", maxLength: 45, nullable: false),
                     Fecha = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ImporteInicio = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    ImporteCierre = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    Estado = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Observaciones = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Activo = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
@@ -82,6 +87,20 @@ namespace GestionDespensa1.BD.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TiposPago",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Descripcion = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Activo = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TiposPago", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DetallesCaja",
                 columns: table => new
                 {
@@ -100,7 +119,7 @@ namespace GestionDespensa1.BD.Migrations
                         column: x => x.IdCaja,
                         principalTable: "Cajas",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -125,7 +144,7 @@ namespace GestionDespensa1.BD.Migrations
                         column: x => x.IdCategoria,
                         principalTable: "Categorias",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -140,6 +159,8 @@ namespace GestionDespensa1.BD.Migrations
                     Total = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     MontoPagado = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     SaldoPendiente = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    MetodoPago = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Notas = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Activo = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
@@ -150,7 +171,7 @@ namespace GestionDespensa1.BD.Migrations
                         column: x => x.IdCliente,
                         principalTable: "Clientes",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -172,7 +193,7 @@ namespace GestionDespensa1.BD.Migrations
                         column: x => x.IdProveedor,
                         principalTable: "Proveedores",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -195,13 +216,44 @@ namespace GestionDespensa1.BD.Migrations
                         column: x => x.IdProducto,
                         principalTable: "Productos",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_DetallesVenta_Ventas_IdVenta",
                         column: x => x.IdVenta,
                         principalTable: "Ventas",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Pagos",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    MontoTotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    MontoPagado = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    SaldoPendiente = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    FechaPago = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IdVenta = table.Column<int>(type: "int", nullable: false),
+                    IdTipoPago = table.Column<int>(type: "int", nullable: false),
+                    Activo = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Pagos", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Pagos_TiposPago_IdTipoPago",
+                        column: x => x.IdTipoPago,
+                        principalTable: "TiposPago",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Pagos_Ventas_IdVenta",
+                        column: x => x.IdVenta,
+                        principalTable: "Ventas",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -224,13 +276,23 @@ namespace GestionDespensa1.BD.Migrations
                         column: x => x.IdCompra,
                         principalTable: "ComprasProveedor",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_DetallesCompraProveedor_Productos_IdProducto",
                         column: x => x.IdProducto,
                         principalTable: "Productos",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.InsertData(
+                table: "TiposPago",
+                columns: new[] { "Id", "Activo", "Descripcion" },
+                values: new object[,]
+                {
+                    { 1, false, "Efectivo" },
+                    { 2, false, "Transferencia" },
+                    { 3, false, "Débito" }
                 });
 
             migrationBuilder.CreateIndex(
@@ -276,6 +338,16 @@ namespace GestionDespensa1.BD.Migrations
                 column: "IdVenta");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Pagos_IdTipoPago",
+                table: "Pagos",
+                column: "IdTipoPago");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Pagos_IdVenta",
+                table: "Pagos",
+                column: "IdVenta");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Productos_IdCategoria",
                 table: "Productos",
                 column: "IdCategoria");
@@ -311,6 +383,9 @@ namespace GestionDespensa1.BD.Migrations
                 name: "DetallesVenta");
 
             migrationBuilder.DropTable(
+                name: "Pagos");
+
+            migrationBuilder.DropTable(
                 name: "Cajas");
 
             migrationBuilder.DropTable(
@@ -318,6 +393,9 @@ namespace GestionDespensa1.BD.Migrations
 
             migrationBuilder.DropTable(
                 name: "Productos");
+
+            migrationBuilder.DropTable(
+                name: "TiposPago");
 
             migrationBuilder.DropTable(
                 name: "Ventas");

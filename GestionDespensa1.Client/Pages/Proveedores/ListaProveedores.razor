@@ -93,66 +93,26 @@ else
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="border-0 ps-4" style="width: 25%;">NOMBRE</th>
-                            <th class="border-0" style="width: 15%;">CUIT</th>
-                            <th class="border-0" style="width: 20%;">CONTACTO</th>
-                            <th class="border-0" style="width: 25%;">PRODUCTOS</th>
-                            <th class="border-0" style="width: 10%;">ESTADO</th>
-                            <th class="border-0 text-center" style="width: 15%;">ACCIONES</th>
+                            <th>Nº</th>
+                            <th>Nombre</th>
+                            <th>CUIT</th>
+                            <th>Teléfono</th>
+                            <th>Email</th>
+                            <th>Dirección</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var proveedor in proveedoresFiltrados)
+                        @foreach (var proveedor in proveedores)
                         {
-                            <tr class="@(proveedor.Estado == "Inactivo" ? "opacity-75" : "")">
-                                <td class="ps-4 fw-bold">
-                                    @proveedor.Nombre
-                                </td>
-                                <td>
-                                    @proveedor.CUIT
-                                </td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(proveedor.Telefono) || !string.IsNullOrEmpty(proveedor.Email))
-                                    {
-                                        <div class="d-flex flex-column">
-                                            @if (!string.IsNullOrEmpty(proveedor.Telefono))
-                                            {
-                                                <span><i class="fas fa-phone me-2 text-muted"></i>@proveedor.Telefono</span>
-                                            }
-                                            @if (!string.IsNullOrEmpty(proveedor.Email))
-                                            {
-                                                <span><i class="fas fa-envelope me-2 text-muted"></i>@proveedor.Email</span>
-                                            }
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Sin contacto</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(proveedor.Productos))
-                                    {
-                                        <div class="d-flex flex-wrap gap-1">
-                                            @foreach (var producto in proveedor.Productos.Split(',').Take(3))
-                                            {
-                                                <span class="badge bg-light text-dark border">
-                                                    @producto.Trim()
-                                                </span>
-                                            }
-                                            @if (proveedor.Productos.Split(',').Length > 3)
-                                            {
-                                                <span class="badge bg-light text-dark border">
-                                                    +@(proveedor.Productos.Split(',').Length - 3)
-                                                </span>
-                                            }
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Sin productos</span>
-                                    }
-                                </td>
+                            <tr>
+                                <td class="fw-bold">@proveedor.Id</td>
+                                <td>@proveedor.Nombre</td>
+                                <td>@proveedor.CUIT</td>
+                                <td>@proveedor.Telefono</td>
+                                <td>@proveedor.Email</td>
+                                <td>@proveedor.Direccion</td>
                                 <td>
                                     <span class="badge @(proveedor.Estado == "Activo" ? "bg-success" : "bg-warning")">
                                         @proveedor.Estado

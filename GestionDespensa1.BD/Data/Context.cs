@@ -10,11 +10,10 @@ namespace GestionDespensa1.BD.Data
 {
     public class Context : DbContext
     {
-        public Context(DbContextOptions<Context> options) : base(options)
-        {
-        }
-
-        // Define tus DbSet<T> aquí según tus entidades
+       
+        //DbSet<T> según mis entidades
+        public DbSet<TipoPago> TiposPago { get; set; }
+        public DbSet<Pago> Pagos { get; set; }
         public DbSet<Caja> Cajas { get; set; }
         public DbSet<DetalleCaja> DetallesCaja { get; set; }
         public DbSet<Cliente> Clientes { get; set; }
@@ -26,8 +25,32 @@ namespace GestionDespensa1.BD.Data
         public DbSet<Proveedor> Proveedores { get; set; }
         public DbSet<Categoria> Categorias { get; set; }
 
+
+        public Context(DbContextOptions<Context> options) : base(options)
+        {
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            var cascadeFKs = modelBuilder.Model.G­etEntityTypes()
+                                          .SelectMany(t => t.GetForeignKeys())
+                                          .Where(fk => !fk.IsOwnership
+                                                       && fk.DeleteBehavior == DeleteBehavior.Casca­de);
+            foreach (var fk in cascadeFKs)
+            {
+                fk.DeleteBehavior = DeleteBehavior.Restr­ict;
+            }
+
+            base.OnModelCreating(modelBuilder);
+
+            // 🔹 SEED DATA de TipoPago
+            modelBuilder.Entity<TipoPago>().HasData(
+                new TipoPago { Id = 1, Descripcion = "Efectivo" },
+                new TipoPago { Id = 2, Descripcion = "Transferencia" },
+                new TipoPago { Id = 3, Descripcion = "Débito" }
+                //new TipoPago { Id = 4, Descripcion = "Crédito" }
+            );
+
             // Configuración de precisiones para campos decimales
             ConfigureDecimalPrecisions(modelBuilder);
         }

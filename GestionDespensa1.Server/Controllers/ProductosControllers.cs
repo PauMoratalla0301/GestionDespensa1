@@ -92,9 +92,11 @@ namespace GestionDespensa1.Server.Controllers
                         Descripcion = p.Descripcion,
                         PrecioUnitario = p.PrecioUnitario,
                         GananciaPorcentaje = p.GananciaPorcentaje,
+                        PrecioVenta = p.PrecioVenta,
                         StockActual = p.StockActual,
                         StockMinimo = p.StockMinimo,
                         IdCategoria = p.IdCategoria,
+
                         Categoria = p.Categoria != null ? new CategoriaDTO
                         {
                             Id = p.Categoria.Id,
@@ -273,8 +275,14 @@ namespace GestionDespensa1.Server.Controllers
                 Console.WriteLine($"✅ Categoría {crearProductoDTO.IdCategoria} existe");
 
                 var producto = _mapper.Map<Producto>(crearProductoDTO);
-                var idCreado = await _repositorio.Insert(producto);
 
+                // 🔥 CALCULAR PRECIO VENTA ANTES DE GUARDAR
+                producto.PrecioVenta =
+                    crearProductoDTO.PrecioUnitario +
+                    (crearProductoDTO.PrecioUnitario *
+                     crearProductoDTO.GananciaPorcentaje / 100);
+
+                var idCreado = await _repositorio.Insert(producto);
                 if (idCreado == -1)
                 {
                     Console.WriteLine($"❌ Error al crear producto en el repositorio");
@@ -310,6 +318,13 @@ namespace GestionDespensa1.Server.Controllers
                 }
 
                 var producto = _mapper.Map<Producto>(productoDTO);
+
+                // 🔥 RECALCULAR TAMBIÉN AL EDITAR
+                producto.PrecioVenta =
+                    productoDTO.PrecioUnitario +
+                    (productoDTO.PrecioUnitario *
+                     productoDTO.GananciaPorcentaje / 100);
+
                 var resultado = await _repositorio.Update(id, producto);
 
                 if (!resultado)

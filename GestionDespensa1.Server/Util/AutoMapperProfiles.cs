@@ -24,7 +24,12 @@ namespace GestionDespensa1.Server.Util
             //CreateMap<CrearDetalleCompraProveedorDTO, DetalleCompraProveedor>().ReverseMap();
             //CreateMap<DetalleCompraProveedorDTO, DetalleCompraProveedor>().ReverseMap();
             CreateMap<CrearDetalleVentaDTO, DetalleVenta>().ReverseMap();
-            CreateMap<DetalleVentaDTO, DetalleVenta>().ReverseMap();
+            CreateMap<DetalleVenta, DetalleVentaDTO>()
+    .ForMember(dest => dest.DescripcionProducto,
+               opt => opt.MapFrom(src => src.Producto.Descripcion))
+    .ForMember(dest => dest.StockActual,
+               opt => opt.MapFrom(src => src.Producto.StockActual))
+    .ReverseMap();
             CreateMap<CrearProductoDTO, Producto>().ReverseMap();
             CreateMap<ProductoDTO, Producto>().ReverseMap();
            // CreateMap<CrearProveedorDTO, Proveedor>().ReverseMap();

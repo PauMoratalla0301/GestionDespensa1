@@ -212,26 +212,88 @@ namespace GestionDespensa1.Server.Controllers
         [HttpPost]
         public async Task<ActionResult<int>> Post(CrearVentaDTO crearVentaDTO)
         {
+            Console.WriteLine("=== JSON RECIBIDO ===");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(crearVentaDTO));
+
+            var clienteExiste = await _context.Clientes
+                .AnyAsync(c => c.Id == crearVentaDTO.IdCliente);
+
+            if (!clienteExiste)
+                return BadRequest($"El cliente {crearVentaDTO.IdCliente} no existe.");
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
-                Console.WriteLine($"📝 Intentando crear venta para cliente: {crearVentaDTO.IdCliente}");
+                Console.WriteLine($"📝 Creando venta para cliente {crearVentaDTO.IdCliente}");
 
-                var venta = _mapper.Map<Venta>(crearVentaDTO);
-                var idCreado = await _repositorio.Insert(venta);
-
-                if (idCreado == -1)
+                var venta = new Venta
                 {
-                    Console.WriteLine($"❌ Error al crear venta");
-                    return BadRequest("No se pudo crear la venta");
+                    IdCliente = crearVentaDTO.IdCliente,
+                    FechaVenta = DateTime.Now,
+                    MetodoPago = crearVentaDTO.MetodoPago,
+                    MontoPagado = crearVentaDTO.MontoPagado,
+                    DetallesVenta = new List<DetalleVenta>()
+                };
+                //if (venta.DetallesVenta == null || !venta.DetallesVenta.Any())
+                //    return BadRequest("La venta no tiene productos.");
+                foreach (var detDTO in crearVentaDTO.DetallesVenta)
+                {
+                    venta.DetallesVenta.Add(new DetalleVenta
+                    {
+                        IdProducto = detDTO.IdProducto,
+                        Cantidad = detDTO.Cantidad,
+                        PrecioUnitario = detDTO.PrecioUnitario
+                    });
                 }
 
-                Console.WriteLine($"✅ Venta creada con ID: {idCreado}");
-                return idCreado;
+                // 🔥 Recalcular total REAL desde detalles
+                venta.Total = venta.DetallesVenta.Sum(d => d.Cantidad * d.PrecioUnitario);
+
+                if (crearVentaDTO.MetodoPago == "Efectivo")
+                {
+                    venta.MontoPagado = venta.Total;
+                }
+
+                venta.SaldoPendiente = venta.Total - venta.MontoPagado;
+                venta.Estado = venta.SaldoPendiente <= 0 ? "Pagado" : "Pendiente";
+
+                // 🔒 Validar y descontar stock
+                foreach (var det in venta.DetallesVenta)
+                {
+                    var producto = await _context.Productos
+                        .FirstOrDefaultAsync(p => p.Id == det.IdProducto);
+
+                    if (producto == null)
+                        throw new Exception($"Producto ID {det.IdProducto} no existe.");
+
+                    if (producto.StockActual < det.Cantidad)
+                        throw new Exception($"Stock insuficiente para {producto.Descripcion}.");
+
+                    producto.StockActual -= det.Cantidad;
+                }
+
+                _context.Ventas.Add(venta);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                Console.WriteLine($"✅ Venta creada con ID {venta.Id}");
+
+                return Ok(venta.Id);
             }
-            catch (Exception err)
+            catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en POST Venta: {err.Message}");
-                return BadRequest(err.Message);
+                Console.WriteLine("ERROR COMPLETO:");
+                Console.WriteLine(ex.ToString());
+
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine("INNER EXCEPTION:");
+                    Console.WriteLine(ex.InnerException.ToString());
+                }
+
+                return BadRequest(ex.InnerException?.Message ?? ex.Message);
             }
         }
 
@@ -329,22 +391,44 @@ namespace GestionDespensa1.Server.Controllers
         {
             try
             {
-                Console.WriteLine($"🗑️ Intentando eliminar venta {id}");
+                var venta = await _context.Ventas
+                    .Include(v => v.DetallesVenta)
+                    .Include(v => v.Pagos)
+                    .FirstOrDefaultAsync(v => v.Id == id);
 
-                var resp = await _repositorio.Delete(id);
-                if (!resp)
+                if (venta == null)
+                    return NotFound();
+
+                // 🔄 Devolver stock
+                var productosIds = venta.DetallesVenta.Select(d => d.IdProducto).ToList();
+
+                var productos = await _context.Productos
+                    .Where(p => productosIds.Contains(p.Id))
+                    .ToListAsync();
+
+                foreach (var det in venta.DetallesVenta)
                 {
-                    Console.WriteLine($"❌ No se pudo borrar venta {id}");
-                    return BadRequest("La venta no se pudo borrar");
+                    var producto = productos.First(p => p.Id == det.IdProducto);
+                    producto.StockActual += det.Cantidad;
                 }
 
-                Console.WriteLine($"✅ Venta {id} eliminada correctamente");
+                // Eliminar pagos
+                if (venta.Pagos != null && venta.Pagos.Any())
+                    _context.Pagos.RemoveRange(venta.Pagos);
+
+                // Eliminar detalles
+                if (venta.DetallesVenta != null && venta.DetallesVenta.Any())
+                    _context.DetallesVenta.RemoveRange(venta.DetallesVenta);
+
+                _context.Ventas.Remove(venta);
+
+                await _context.SaveChangesAsync();
+
                 return Ok();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en DELETE Venta {id}: {ex.Message}");
-                return BadRequest($"Error: {ex.Message}");
+                return BadRequest(ex.Message);
             }
         }
     }

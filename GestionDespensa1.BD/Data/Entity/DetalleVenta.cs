@@ -35,7 +35,7 @@ namespace GestionDespensa1.BD.Data.Entity
         [ForeignKey("IdProducto")]
         public Producto Producto { get; set; }
 
-
+        //public decimal Subtotal { get; set; }
 
 
     }

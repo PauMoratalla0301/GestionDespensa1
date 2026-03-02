@@ -1,13 +1,16 @@
 ﻿@page "/ventas/nuevo"
 @page "/ventas/editar/{Id:int}"
+@page "/ventas/detalles/{Id:int}"
 @using GestionDespensa1.Shared.DTO
 @using GestionDespensa1.Client.Servicios.Entidades
+@using Microsoft.AspNetCore.Components.Web
 @inject IVentaService VentaService
 @inject IClienteService ClienteService
 @inject IProductoService ProductoService
 @inject ICategoriaService CategoriaService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+
 
 <PageTitle>@Titulo - GestionDespensa</PageTitle>
 
@@ -30,8 +33,10 @@
                 <a href="/productos/nuevo" class="alert-link">Crear un producto primero</a>
             </div>
         }
+        
         else
         {
+
             <EditForm Model="venta" OnValidSubmit="GuardarVenta">
                 <DataAnnotationsValidator />
                 <ValidationSummary class="alert alert-danger" />
@@ -101,15 +106,18 @@
                                         <th>CANTIDAD</th>
                                         <th>PRECIO FINAL</th>
                                         <th>SUBTOTAL</th>
-                                        <th>ACCIONES</th>
+                                        @if (!EsModoSoloLectura)  // ← AGREGAR ESTO
+                                        {
+                                            <th>ACCIONES</th>
+                                        }
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @if (!detallesVenta.Any())
                                     {
                                         <tr>
-                                            <td colspan="5" class="text-center text-muted py-4">
-                                                No hay productos añadidos. Haga clic en "Añadir producto" para comenzar.
+                                            <td colspan="@(EsModoSoloLectura ? 4 : 5)" class="text-center text-muted py-4">
+                                                @(EsModoSoloLectura ? "No hay productos en esta venta." : "No hay productos añadidos. Haga clic en \"Añadir producto\" para comenzar.")
                                             </td>
                                         </tr>
                                     }
@@ -264,18 +272,32 @@
 
                 <div class="form-group mb-4">
                     <label for="estado" class="form-label fw-bold">Estado *</label>
-                    <InputSelect id="estado" @bind-Value="venta.Estado" class="form-control">
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Pagado">Pagado</option>
-                        <option value="Cancelado">Cancelado</option>
-                    </InputSelect>
-                    <ValidationMessage For="@(() => venta.Estado)" class="text-danger small" />
+                    @if (EsModoSoloLectura)
+                    {
+                        <input type="text" id="estado" class="form-control" value="@venta.Estado" readonly disabled />
+                    }
+                    else
+                    {
+                        <select id="estado" class="form-control" @onchange="@OnEstadoChanged">
+                            <option value="Pendiente" selected="@(venta.Estado == "Pendiente")">Pendiente</option>
+                            <option value="Pagado" selected="@(venta.Estado == "Pagado")">Pagado</option>
+                            <option value="Cancelado" selected="@(venta.Estado == "Cancelado")">Cancelado</option>
+                        </select>
+                        <ValidationMessage For="@(() => venta.Estado)" class="text-danger small" />
+                    }
                 </div>
 
                 <div class="form-group mb-3">
                     <label for="notas" class="form-label fw-bold">Notas</label>
-                    <textarea id="notas" @bind="venta.Notas" class="form-control" rows="3"
-                              placeholder="Información adicional sobre esta venta..."></textarea>
+                    @if (EsModoSoloLectura)
+                    {
+                        <textarea id="notas" class="form-control" rows="3" readonly disabled>@venta.Notas</textarea>
+                    }
+                    else
+                    {
+                        <textarea id="notas" @bind="venta.Notas" class="form-control" rows="3"
+                                  placeholder="Información adicional sobre esta venta..."></textarea>
+                    }
                 </div>
 
                 <div class="form-group">
@@ -288,6 +310,39 @@
                     </button>
                 </div>
             </EditForm>
+            @if (ventaFinalizada)
+            {
+                <div class="card mt-4" style="max-width: 350px;">
+                    <div class="card-body" id="ticket">
+                        <div class="text-center">
+                            <h5><strong>Despensa Raquel</strong></h5>
+                            <small>Dirección: Coronel.Pedro Zanni 155</small><br />
+                            <small>@venta.FechaVenta.ToString("dd/MM/yyyy HH:mm")</small>
+                            <hr />
+                        </div>
+
+                        @foreach (var item in detallesVenta)
+                        {
+                            <div class="d-flex justify-content-between">
+                                <span>@item.DescripcionProducto x@item.Cantidad</span>
+                                <span>$@item.Subtotal.ToString("F2")</span>
+                            </div>
+                        }
+
+                        <hr />
+                        <div class="d-flex justify-content-between">
+                            <strong>Total:</strong>
+                            <strong>$@venta.Total.ToString("F2")</strong>
+                        </div>
+
+                        <div class="mt-3 text-center">
+                            <button class="btn btn-outline-dark btn-sm" @onclick="ImprimirTicket">
+                                <i class="fas fa-print me-1"></i> Imprimir Ticket
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
         }
     </div>
 </div>
@@ -295,7 +350,9 @@
 <!-- Modal para productos existentes -->
 @if (mostrarModalProducto)
 {
-    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);"
+         tabindex="-1"
+         @onkeydown="@HandleKeyPress">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -631,7 +688,8 @@
         SaldoPendiente = 0,
         MetodoPago = "Mixto",
         Notas = "",
-        IdCliente = 0
+        IdCliente = 0,
+        DetallesVenta = new List<DetalleVentaDTO>()
     };
 
     private decimal pagoEfectivo = 0;
@@ -670,6 +728,7 @@
     private bool clientesCargando = true;
     private bool productosCargando = true;
     private bool categoriasCargando = true;
+    private bool ventaFinalizada = false;
 
     // Propiedades computadas
     private string Titulo => Id == 0 ? "Nueva Venta" : "Editar Venta";
@@ -693,7 +752,7 @@
                                          productoNuevoPrecioFinal > 0 &&
                                          productoNuevoStockMinimo > 0;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
         await CargarClientes();
         await CargarProductos();
@@ -870,7 +929,8 @@
 
     private void OnCantidadDetalleChanged(ChangeEventArgs e)
     {
-        detalleSeleccionado.Cantidad = ObtenerInt(e.Value);
+        if (e.Value != null)
+            detalleSeleccionado.Cantidad = ObtenerInt(e.Value);
         StateHasChanged();
     }
 
@@ -960,26 +1020,33 @@
         productosCargando = false;
         StateHasChanged();
     }
-
+    
     private async Task CargarVenta()
     {
         cargando = true;
+
         var respuesta = await VentaService.Get(Id);
 
         if (!respuesta.Error && respuesta.Respuesta != null)
         {
             venta = respuesta.Respuesta;
-            // Cargar detalles de venta existentes
-            detallesVenta = venta.DetallesVenta ?? new List<DetalleVentaDTO>();
+
+            // 🔥 Asegurar que nunca sea null
+            venta.DetallesVenta ??= new List<DetalleVentaDTO>();
+
+            detallesVenta = new List<DetalleVentaDTO>(venta.DetallesVenta);
+
             ActualizarTotales();
         }
 
         cargando = false;
-        StateHasChanged();
     }
-
+    //Metodo para actualizar el precio automaticamente
+    private bool EsModoSoloLectura => Navigation.Uri.Contains("/detalles/");
     private void MostrarModalProducto()
     {
+        if (EsModoSoloLectura) return;
+
         detalleEditando = false;
         detalleSeleccionado = new DetalleVentaDTO { Cantidad = 1, PrecioUnitario = 0 };
         mostrarModalProducto = true;
@@ -1028,6 +1095,8 @@
 
     private void OnProductoSeleccionadoChanged()
     {
+        Console.WriteLine($"Producto seleccionado ID: {detalleSeleccionado.IdProducto}");
+
         if (detalleSeleccionado.IdProducto > 0)
         {
             var producto = productosDisponibles.FirstOrDefault(p => p.Id == detalleSeleccionado.IdProducto);
@@ -1061,7 +1130,8 @@
 
     private void OnStockMinimoProductoNuevoChanged(ChangeEventArgs e)
     {
-        productoNuevoStockMinimo = ObtenerInt(e.Value);
+        if (e.Value != null)
+            productoNuevoStockMinimo = ObtenerInt(e.Value);
         StateHasChanged();
     }
 
@@ -1142,6 +1212,54 @@
 
         var producto = productosDisponibles.FirstOrDefault(p => p.Id == detalleSeleccionado.IdProducto);
         return producto != null && detalleSeleccionado.Cantidad <= producto.StockActual;
+    }
+    private void ActualizarHora(string? horaSeleccionada)
+    {
+        if (!string.IsNullOrEmpty(horaSeleccionada))
+        {
+            // Parsear la hora seleccionada (formato HH:mm)
+            if (TimeSpan.TryParse(horaSeleccionada, out TimeSpan hora))
+            {
+                // Crear nueva fecha manteniendo la fecha actual pero cambiando la hora
+                venta.FechaVenta = new DateTime(
+                    venta.FechaVenta.Year,
+                    venta.FechaVenta.Month,
+                    venta.FechaVenta.Day,
+                    hora.Hours,
+                    hora.Minutes,
+                    0  // Segundos a 0
+                );
+            }
+        }
+    }
+    // Agrega este método para manejar el cambio manual de estado
+    private void OnEstadoChanged(ChangeEventArgs e)
+    {
+        // Validación segura contra nulos
+        string? nuevoEstado = e.Value as string ?? e.Value?.ToString();
+
+        if (!string.IsNullOrWhiteSpace(nuevoEstado))
+        {
+            venta.Estado = nuevoEstado;
+
+            // Si el usuario selecciona "Pagado", ajustar automáticamente el monto pagado
+            if (venta.Estado == "Pagado" && venta.MontoPagado < venta.Total)
+            {
+                venta.MontoPagado = venta.Total;
+                venta.SaldoPendiente = 0;
+
+                // Mostrar mensaje al usuario (opcional)
+                _ = JS.InvokeVoidAsync("alert", "Se ha ajustado automáticamente el monto pagado al total.");
+            }
+            // Si el usuario selecciona "Pendiente" pero el monto pagado es igual al total
+            else if (venta.Estado == "Pendiente" && venta.MontoPagado >= venta.Total)
+            {
+                venta.MontoPagado = 0;
+                venta.SaldoPendiente = venta.Total;
+            }
+
+            StateHasChanged();
+        }
     }
 
     private void AgregarDetalle()
@@ -1301,6 +1419,7 @@
 
     private void EditarDetalle(DetalleVentaDTO detalle)
     {
+        if (EsModoSoloLectura) return;
         detalleEditando = true;
         detalleOriginal = detalle;
         detalleSeleccionado = new DetalleVentaDTO
@@ -1317,6 +1436,7 @@
 
     private void EliminarDetalle(DetalleVentaDTO detalle)
     {
+        if (EsModoSoloLectura) return;
         detallesVenta.Remove(detalle);
         ActualizarTotales();
         StateHasChanged();
@@ -1328,22 +1448,29 @@
         ActualizarPagos();
     }
 
-    private decimal ParseDecimalCorregido(object value)
+    private decimal ParseDecimalCorregido(object? value)
     {
         if (value == null) return 0;
 
         if (value is string strValue)
         {
-            // Reemplazar coma por punto para formato universal
             strValue = strValue.Replace(",", ".");
             if (decimal.TryParse(strValue, System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture, out decimal result))
             {
                 return Math.Round(result, 2);
             }
+            return 0;
         }
 
-        return Convert.ToDecimal(value);
+        try
+        {
+            return Convert.ToDecimal(value);
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     private int ObtenerIdClienteValido()
@@ -1366,8 +1493,24 @@
 
     private async Task GuardarVenta()
     {
-        cargando = true;
+        var totalActual = detallesVenta.Sum(d => d.Cantidad * d.PrecioUnitario);
+
+        venta.Total = totalActual;
+        venta.SaldoPendiente = totalActual - venta.MontoPagado;
+
+        // Asegurar que el saldo pendiente no sea negativo
+        if (venta.SaldoPendiente < 0)
+        {
+            venta.SaldoPendiente = 0;
+            venta.MontoPagado = totalActual;
+        }
+
+        venta.Estado = venta.SaldoPendiente > 0 ? "Pendiente" : "Pagado";
+
+        Console.WriteLine($"Totales actualizados - Total: {venta.Total}, Saldo: {venta.SaldoPendiente}, Estado: {venta.Estado}");
+
         StateHasChanged();
+    
 
         if (venta.IdCliente == 0) // 0 = Cliente ocasional
         {
@@ -1407,9 +1550,10 @@
         var detallesPago = $"PAGOS: Efectivo: ${pagoEfectivo:F2} | Transferencia: ${pagoTransferencia:F2} | Tarjeta: ${pagoTarjeta:F2}";
         venta.Notas = string.IsNullOrEmpty(venta.Notas) ? detallesPago : $"{venta.Notas}\n{detallesPago}";
 
-        if (Id == 0)
+        if (Id == 0) // NUEVA VENTA
         {
-            var crearVenta = new CrearVentaDTO
+            // Crear objeto anónimo con la estructura que espera el backend
+            var nuevaVenta = new CrearVentaDTO
             {
                 IdCliente = ObtenerIdClienteValido(), 
                 FechaVenta = venta.FechaVenta,
@@ -1427,7 +1571,9 @@
                 }).ToList()
             };
 
-            var respuesta = await VentaService.Insert(crearVenta);
+            var respuesta = await VentaService.Insert(nuevaVenta);
+
+            // 🔥 IMPORTANTE: Procesar la respuesta
             if (!respuesta.Error && respuesta.Respuesta > 0)
             {
                 await JS.InvokeVoidAsync("alert", "✅ Venta creada exitosamente");
@@ -1441,11 +1587,12 @@
                 await JS.InvokeVoidAsync("alert", $"❌ Error al crear venta: {mensajeError}");
                 Console.WriteLine($"Error detallado: {mensajeError}");
 
+                Console.WriteLine($"Error detallado: {mensajeError}");
                 // mostrar los datos que se están enviando
-                Console.WriteLine($"DATOS ENVIADOS: Cliente: {crearVenta.IdCliente}, Total: {crearVenta.Total}, Productos: {crearVenta.DetallesVenta.Count}");
+                // Console.WriteLine($"DATOS ENVIADOS: Cliente: {crearVenta.IdCliente}, Total: {crearVenta.Total}, Productos: {crearVenta.DetallesVenta.Count}");
             }
         }
-        else
+        else // EDICIÓN
         {
             
             venta.Total = Math.Round(venta.Total, 2);
@@ -1459,6 +1606,7 @@
             }).ToList();
 
             var respuesta = await VentaService.Update(Id, venta);
+
             if (!respuesta.Error)
             {
                 await JS.InvokeVoidAsync("alert", "✅ Venta actualizada exitosamente");
@@ -1479,4 +1627,20 @@
         
      
     private void Cancelar() => Navigation.NavigateTo("/ventas");
+    private async Task ImprimirTicket()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    private void HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && mostrarModalProducto)
+        {
+            AgregarDetalle();
+        }
+        else if (e.Key == "Escape")
+        {
+            CerrarModalProducto();
+        }
+    }
 }

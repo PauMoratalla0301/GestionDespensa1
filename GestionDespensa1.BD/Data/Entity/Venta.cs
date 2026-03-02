@@ -52,6 +52,8 @@ namespace GestionDespensa1.BD.Data.Entity
         // Navigation properties
         [ForeignKey("IdCliente")]
         public Cliente Cliente { get; set; }
+        
         public List<DetalleVenta> DetallesVenta { get; set; } = new List<DetalleVenta>();
+        public List<Pago> Pagos { get; set; } = new List<Pago>();
     }
 }

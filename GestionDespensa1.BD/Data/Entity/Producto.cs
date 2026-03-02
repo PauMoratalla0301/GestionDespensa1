@@ -27,6 +27,10 @@ namespace GestionDespensa1.BD.Data.Entity
         [Precision(5, 2)]
         public decimal GananciaPorcentaje { get; set; }
 
+        [Display(Name = "Precio Venta")]
+        [Precision(18, 2)]
+        public decimal PrecioVenta { get; set; }
+
         [Required(ErrorMessage = "El stock actual es obligatorio.")]
         [Display(Name = "Stock Actual")]
         public int StockActual { get; set; }
