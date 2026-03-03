@@ -16,4 +16,8 @@
     <ProjectReference Include="..\GestionDespensa1.Shared\GestionDespensa1.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Pages\DetalleVentas\" />
+  </ItemGroup>
+
 </Project>

@@ -221,80 +221,72 @@ namespace GestionDespensa1.Server.Controllers
             if (!clienteExiste)
                 return BadRequest($"El cliente {crearVentaDTO.IdCliente} no existe.");
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-
-            try
+            // Crear la venta
+            var venta = new Venta
             {
-                Console.WriteLine($"📝 Creando venta para cliente {crearVentaDTO.IdCliente}");
+                IdCliente = crearVentaDTO.IdCliente,
+                FechaVenta = DateTime.Now,
+                MetodoPago = crearVentaDTO.MetodoPago,
+                MontoPagado = crearVentaDTO.MontoPagado,
+                DetallesVenta = new List<DetalleVenta>()
+            };
 
-                var venta = new Venta
+            foreach (var detDTO in crearVentaDTO.DetallesVenta)
+            {
+                venta.DetallesVenta.Add(new DetalleVenta
                 {
-                    IdCliente = crearVentaDTO.IdCliente,
-                    FechaVenta = DateTime.Now,
-                    MetodoPago = crearVentaDTO.MetodoPago,
-                    MontoPagado = crearVentaDTO.MontoPagado,
-                    DetallesVenta = new List<DetalleVenta>()
-                };
-                //if (venta.DetallesVenta == null || !venta.DetallesVenta.Any())
-                //    return BadRequest("La venta no tiene productos.");
-                foreach (var detDTO in crearVentaDTO.DetallesVenta)
+                    IdProducto = detDTO.IdProducto,
+                    Cantidad = detDTO.Cantidad,
+                    PrecioUnitario = detDTO.PrecioUnitario
+                });
+            }
+
+            venta.Total = venta.DetallesVenta.Sum(d => d.Cantidad * d.PrecioUnitario);
+            venta.SaldoPendiente = venta.Total - venta.MontoPagado;
+            venta.Estado = venta.SaldoPendiente <= 0 ? "Pagado" : "Pendiente";
+
+            // 🔁 Usar la estrategia de ejecución para manejar reintentos automáticos
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            await strategy.ExecuteAsync(async () =>
+            {
+                // Iniciar transacción manual DENTRO de la estrategia
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
                 {
-                    venta.DetallesVenta.Add(new DetalleVenta
+                    // Validar y descontar stock
+                    foreach (var det in venta.DetallesVenta)
                     {
-                        IdProducto = detDTO.IdProducto,
-                        Cantidad = detDTO.Cantidad,
-                        PrecioUnitario = detDTO.PrecioUnitario
-                    });
+                        var producto = await _context.Productos
+                            .FirstOrDefaultAsync(p => p.Id == det.IdProducto);
+
+                        if (producto == null)
+                            throw new Exception($"Producto ID {det.IdProducto} no existe.");
+
+                        if (producto.StockActual < det.Cantidad)
+                            throw new Exception($"Stock insuficiente para {producto.Descripcion}.");
+
+                        producto.StockActual -= det.Cantidad;
+                    }
+
+                    _context.Ventas.Add(venta);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+
+                    Console.WriteLine($"✅ Venta creada con ID {venta.Id}");
                 }
-
-                // 🔥 Recalcular total REAL desde detalles
-                venta.Total = venta.DetallesVenta.Sum(d => d.Cantidad * d.PrecioUnitario);
-
-                if (crearVentaDTO.MetodoPago == "Efectivo")
+                catch (Exception ex)
                 {
-                    venta.MontoPagado = venta.Total;
+                    await transaction.RollbackAsync();
+                    Console.WriteLine("ERROR COMPLETO:");
+                    Console.WriteLine(ex.ToString());
+                    throw;
                 }
+            });
 
-                venta.SaldoPendiente = venta.Total - venta.MontoPagado;
-                venta.Estado = venta.SaldoPendiente <= 0 ? "Pagado" : "Pendiente";
-
-                // 🔒 Validar y descontar stock
-                foreach (var det in venta.DetallesVenta)
-                {
-                    var producto = await _context.Productos
-                        .FirstOrDefaultAsync(p => p.Id == det.IdProducto);
-
-                    if (producto == null)
-                        throw new Exception($"Producto ID {det.IdProducto} no existe.");
-
-                    if (producto.StockActual < det.Cantidad)
-                        throw new Exception($"Stock insuficiente para {producto.Descripcion}.");
-
-                    producto.StockActual -= det.Cantidad;
-                }
-
-                _context.Ventas.Add(venta);
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                Console.WriteLine($"✅ Venta creada con ID {venta.Id}");
-
-                return Ok(venta.Id);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("ERROR COMPLETO:");
-                Console.WriteLine(ex.ToString());
-
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine("INNER EXCEPTION:");
-                    Console.WriteLine(ex.InnerException.ToString());
-                }
-
-                return BadRequest(ex.InnerException?.Message ?? ex.Message);
-            }
+            return Ok(venta.Id);
         }
 
         [HttpPut("{id:int}")]

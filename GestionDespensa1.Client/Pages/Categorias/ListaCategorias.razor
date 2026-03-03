@@ -40,7 +40,6 @@ else
                 <table class="table table-striped table-hover">
                     <thead class="table-dark">
                         <tr>
-                            <th>#</th>
                             <th>Nº</th>
                             <th>Nombre de Categoría</th>
                             <th class="text-center">Acciones</th>
@@ -51,9 +50,7 @@ else
                         {
                             <tr>
                                 <td class="fw-bold">@categoria.Id</td>
-                                <td>
-                                    <span class="badge bg-primary fs-6">@categoria.NombreCategoria</span>
-                                </td>
+                                <td class="fw-bold">@categoria.NombreCategoria</td>
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-warning me-1" @onclick="() => EditarCategoria(categoria.Id)"
                                             title="Editar categoría">
@@ -77,6 +74,25 @@ else
     .spinner {
         animation: spin 1s linear infinite;
     }
+
+    .table tbody tr {
+        transition: all 0.3s ease;
+    }
+
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+    .btn-group .btn {
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+
+        .btn-group .btn:hover {
+            transform: scale(1.1);
+        }
 
     @@keyframes spin {
         from {

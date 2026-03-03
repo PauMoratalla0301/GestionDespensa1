@@ -18,6 +18,10 @@
                 @onclick="VerTodos">
             <i class="bi bi-list me-1"></i> Mostrar Todos
         </button>
+        <button class="btn @(filtroActivo == "stockBajo" ? "btn-warning" : "btn-outline-warning")"
+                @onclick="VerStockBajo" title="Ver productos con stock bajo">
+            <i class="bi bi-exclamation-triangle me-1"></i> Stock Bajo
+        </button>
     </div>
 </div>
 
@@ -47,9 +51,10 @@ else
                 <table class="table table-striped table-hover">
                     <thead class="table-dark">
                         <tr>
+                            <th>Nº</th>
                             <th>Descripción</th>
-                            <th>Precio Unitario</th>
-                            <th>Precio Final</th>
+                            <th>Precio</th>
+                            <th>% Ganancia</th>
                             <th>Stock</th>
                             <th>Stock Mínimo</th>
                             <th>Categoría</th>
@@ -63,18 +68,11 @@ else
 
                         @foreach (var producto in productos)
                         {
-                            var precioFinal = CalcularPrecioFinal(producto.PrecioUnitario, producto.GananciaPorcentaje);
                             <tr class="@(producto.StockActual <= producto.StockMinimo ? "table-warning" : "")">
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="producto-badge me-3">
-                                            <i class="bi bi-box product-icon"></i>
-                                        </div>
-                                        <div class="fw-bold">@producto.Descripcion</div>
-                                    </div>
-                                </td>
-                                <td class="text-success fw-bold">@producto.PrecioUnitario.ToString("C")</td>
-                                <td class="text-primary fw-bold fs-6">@precioFinal.ToString("C")</td>
+                                <td class="fw-bold">@contador</td>
+                                <td>@producto.Descripcion</td>
+                                <td class="text-success fw-bold">$@producto.PrecioUnitario.ToString("N2")</td>
+                                <td>@producto.GananciaPorcentaje.ToString("F1")%</td>
                                 <td>
                                     <span class="badge @(producto.StockActual <= producto.StockMinimo ? "bg-danger" : "bg-success") fs-6">
                                         @producto.StockActual
@@ -107,21 +105,6 @@ else
 <style>
     .spinner {
         animation: spin 1s linear infinite;
-    }
-
-    .producto-badge {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .product-icon {
-        color: white;
-        font-size: 1.3rem;
     }
 
     .table tbody tr {
@@ -170,7 +153,7 @@ else
     private async Task VerTodos()
     {
         filtroActivo = "todos";
-        await CargarProductos(); 
+        await CargarProductos();
     }
 
     private async Task VerStockBajo()
@@ -228,19 +211,8 @@ else
         return categorias.FirstOrDefault(c => c.Id == idCategoria)?.NombreCategoria ?? "Sin categoría";
     }
 
-    private decimal CalcularPrecioFinal(decimal precioUnitario, decimal gananciaPorcentaje)
-    {
-        if (precioUnitario > 0 && gananciaPorcentaje >= 0)
-        {
-            decimal ganancia = precioUnitario * (gananciaPorcentaje / 100);
-            return precioUnitario + ganancia;
-        }
-        return 0;
-    }
-
     private void NuevoProducto() => Navigation.NavigateTo("/productos/nuevo");
     private void EditarProducto(int id) => Navigation.NavigateTo($"/productos/editar/{id}");
-
 
     private async Task EliminarProducto(int id)
     {
