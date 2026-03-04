@@ -1,8 +1,9 @@
-﻿using GestionDespensa1.Client.Servicios.Http;
+﻿using GestionDespensa1.Client.Servicios.Entidades;
+using GestionDespensa1.Client.Servicios.Http;
 using GestionDespensa1.Shared.DTO;
 using System.Net.Http.Json;
 
-namespace GestionDespensa1.Client.Servicios.Entidades
+namespace GestionDespensa1.Client.Servicios.Auth
 {
     public class CompraProveedorService : ICompraProveedorService
     {

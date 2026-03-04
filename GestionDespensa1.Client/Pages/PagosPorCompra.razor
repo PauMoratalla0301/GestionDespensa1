@@ -1,0 +1,271 @@
+﻿@page "/pagos-proveedor/compra/{idCompra:int}"
+@using GestionDespensa1.Client.Servicios.Entidades
+@using GestionDespensa1.Shared.DTO
+@inject IPagoProveedorService PagoProveedorService
+@inject ICompraProveedorService CompraService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Pagos de Compra - Gestión Despensa</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-hand-holding-usd text-success me-2"></i>
+            Pagos de Compra #@idCompra
+        </h2>
+        <button class="btn btn-outline-secondary" @onclick="Volver">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+        </button>
+    </div>
+
+    @if (cargando)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-success" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-3">Cargando información...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Información de la compra -->
+        @if (compra != null)
+        {
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Detalle de la Compra</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Proveedor:</strong> @compra.NombreProveedor
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Fecha:</strong> @compra.FechaCompra.ToString("dd/MM/yyyy")
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Total:</strong> <span class="fw-bold text-success">@compra.Total.ToString("C")</span>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-4">
+                            <strong>Pagado:</strong> <span class="fw-bold text-success">@totalPagado.ToString("C")</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Pendiente:</strong>
+                            <span class="fw-bold @(pendiente > 0 ? "text-danger" : "text-success")">
+                                @pendiente.ToString("C")
+                            </span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Estado:</strong>
+                            <span class="badge @(pendiente <= 0 ? "bg-success" : "bg-warning")">
+                                @(pendiente <= 0 ? "PAGADA" : "PENDIENTE")
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Botón para nuevo pago -->
+        <div class="mb-3">
+            <button class="btn btn-success" @onclick="MostrarModalPago">
+                <i class="fas fa-plus me-2"></i> Registrar Nuevo Pago
+            </button>
+        </div>
+
+        <!-- Tabla de pagos -->
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Historial de Pagos</h5>
+            </div>
+            <div class="card-body">
+                @if (pagos == null || !pagos.Any())
+                {
+                    <div class="alert alert-info">
+                        No hay pagos registrados para esta compra.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Fecha</th>
+                                    <th>Monto</th>
+                                    <th>Medio de Pago</th>
+                                    <th>Observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var pago in pagos)
+                                {
+                                    <tr>
+                                        <td>@pago.Id</td>
+                                        <td>@pago.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td class="fw-bold text-success">@pago.Monto.ToString("C")</td>
+                                        <td>@pago.MedioPago</td>
+                                        <td>@pago.Observaciones</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal para nuevo pago -->
+@if (mostrarModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Registrar Pago</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="nuevoPago" OnValidSubmit="GuardarPago">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="alert alert-danger" />
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Monto *</label>
+                            <InputNumber class="form-control" @bind-Value="nuevoPago.Monto" min="0.01" step="0.01" />
+                            <ValidationMessage For="@(() => nuevoPago.Monto)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Medio de Pago *</label>
+                            <InputSelect class="form-control" @bind-Value="nuevoPago.MedioPago">
+                                <option value="EFECTIVO">Efectivo</option>
+                                <option value="TRANSFERENCIA">Transferencia</option>
+                                <option value="CHEQUE">Cheque</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Observaciones</label>
+                            <InputTextArea class="form-control" @bind-Value="nuevoPago.Observaciones" rows="3" />
+                        </div>
+
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Monto pendiente: @pendiente.ToString("C")
+                        </div>
+
+                        <button type="submit" class="btn btn-success" disabled="@guardando">
+                            @if (guardando)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Guardar Pago
+                        </button>
+                        <button type="button" class="btn btn-secondary ms-2" @onclick="CerrarModal">Cancelar</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int idCompra { get; set; }
+
+    private List<PagoProveedorDTO>? pagos;
+    private CompraProveedorDTO? compra;
+    private bool cargando = true;
+    private bool mostrarModal = false;
+    private bool guardando = false;
+    private decimal totalPagado => pagos?.Sum(p => p.Monto) ?? 0;
+    private decimal pendiente => (compra?.Total ?? 0) - totalPagado;
+
+    private CrearPagoProveedorDTO nuevoPago = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        // Cargar compra
+        var respuestaCompra = await CompraService.Get(idCompra);
+        if (!respuestaCompra.Error)
+        {
+            compra = respuestaCompra.Respuesta;
+        }
+
+        // Cargar pagos
+        var respuestaPagos = await PagoProveedorService.GetByCompra(idCompra);
+        if (!respuestaPagos.Error)
+        {
+            pagos = respuestaPagos.Respuesta;
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void MostrarModalPago()
+    {
+        nuevoPago = new CrearPagoProveedorDTO
+        {
+            IdCompra = idCompra,
+            Fecha = DateTime.Now,
+            MedioPago = "EFECTIVO"
+        };
+        mostrarModal = true;
+        StateHasChanged();
+    }
+
+    private void CerrarModal()
+    {
+        mostrarModal = false;
+        StateHasChanged();
+    }
+
+    private async Task GuardarPago()
+    {
+        if (nuevoPago.Monto > pendiente + 0.01m)
+        {
+            await JS.InvokeVoidAsync("alert", $"El monto no puede ser mayor al pendiente ({pendiente:C2})");
+            return;
+        }
+
+        guardando = true;
+        StateHasChanged();
+
+        var respuesta = await PagoProveedorService.Insert(nuevoPago);
+        if (!respuesta.Error && respuesta.Respuesta > 0)
+        {
+            await JS.InvokeVoidAsync("alert", "✅ Pago registrado correctamente");
+            CerrarModal();
+            await CargarDatos();
+        }
+        else
+        {
+            var error = await respuesta.ObtenerError();
+            await JS.InvokeVoidAsync("alert", $"❌ Error: {error}");
+        }
+
+        guardando = false;
+        StateHasChanged();
+    }
+
+    private void Volver()
+    {
+        Navigation.NavigateTo("/pagos-proveedor");
+    }
+}

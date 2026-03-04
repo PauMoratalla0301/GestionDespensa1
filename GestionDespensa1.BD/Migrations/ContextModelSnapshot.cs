@@ -22,6 +22,39 @@ namespace GestionDespensa1.BD.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("DetalleCompraProveedor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdCompra")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdProducto")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PrecioUnitario")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdCompra");
+
+                    b.HasIndex("IdProducto");
+
+                    b.ToTable("DetallesCompraProveedor");
+                });
+
             modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.Caja", b =>
                 {
                     b.Property<int>("Id")
@@ -41,10 +74,8 @@ namespace GestionDespensa1.BD.Migrations
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("IdUsuario")
-                        .IsRequired()
-                        .HasMaxLength(45)
-                        .HasColumnType("nvarchar(45)");
+                    b.Property<int>("IdUsuario")
+                        .HasColumnType("int");
 
                     b.Property<decimal?>("ImporteCierre")
                         .HasPrecision(18, 2)
@@ -59,6 +90,8 @@ namespace GestionDespensa1.BD.Migrations
                         .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IdUsuario");
 
                     b.ToTable("Cajas");
                 });
@@ -148,18 +181,28 @@ namespace GestionDespensa1.BD.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
-                    b.Property<string>("FechaCompra")
+                    b.Property<string>("Estado")
                         .IsRequired()
-                        .HasMaxLength(45)
-                        .HasColumnType("nvarchar(45)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("FechaCompra")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("IdProveedor")
                         .HasColumnType("int");
 
+                    b.Property<string>("MetodoPago")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("Observaciones")
-                        .IsRequired()
-                        .HasMaxLength(45)
-                        .HasColumnType("nvarchar(45)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -179,57 +222,34 @@ namespace GestionDespensa1.BD.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Concepto")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("IdCaja")
                         .HasColumnType("int");
 
-                    b.Property<string>("IdVenta")
-                        .IsRequired()
-                        .HasMaxLength(45)
-                        .HasColumnType("nvarchar(45)");
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Monto")
+                    b.Property<string>("Referencia")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Tipo")
                         .IsRequired()
-                        .HasMaxLength(45)
-                        .HasColumnType("nvarchar(45)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("IdCaja");
 
                     b.ToTable("DetallesCaja");
-                });
-
-            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.DetalleCompraProveedor", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("Cantidad")
-                        .HasColumnType("int");
-
-                    b.Property<int>("IdCompra")
-                        .HasColumnType("int");
-
-                    b.Property<int>("IdProducto")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("PrecioUnitario")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdCompra");
-
-                    b.HasIndex("IdProducto");
-
-                    b.ToTable("DetallesCompraProveedor");
                 });
 
             modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.DetalleVenta", b =>
@@ -263,6 +283,126 @@ namespace GestionDespensa1.BD.Migrations
                     b.HasIndex("IdVenta");
 
                     b.ToTable("DetallesVenta");
+                });
+
+            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.MovimientoStock", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("IdProducto")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Referencia")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("StockAnterior")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StockNuevo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdProducto");
+
+                    b.ToTable("MovimientosStock");
+                });
+
+            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.PagoProveedor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("IdCompra")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MedioPago")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdCompra");
+
+                    b.ToTable("PagosProveedor");
+                });
+
+            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.PagoVenta", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("IdVenta")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MedioPago")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdVenta");
+
+                    b.ToTable("PagosVenta");
                 });
 
             modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.Pago", b =>
@@ -404,7 +544,7 @@ namespace GestionDespensa1.BD.Migrations
                     b.ToTable("Proveedores");
                 });
 
-            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.TipoPago", b =>
+            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.Usuario", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -415,34 +555,37 @@ namespace GestionDespensa1.BD.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Descripcion")
+                    b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Rol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("TiposPago");
+                    b.HasIndex(new[] { "Email" }, "Usuario_Email_UQ")
+                        .IsUnique();
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Activo = false,
-                            Descripcion = "Efectivo"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Activo = false,
-                            Descripcion = "Transferencia"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Activo = false,
-                            Descripcion = "Débito"
-                        });
+                    b.ToTable("Usuarios");
                 });
 
             modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.Venta", b =>
@@ -465,6 +608,9 @@ namespace GestionDespensa1.BD.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("IdCliente")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdUsuario")
                         .HasColumnType("int");
 
                     b.Property<string>("MetodoPago")
@@ -492,7 +638,39 @@ namespace GestionDespensa1.BD.Migrations
 
                     b.HasIndex("IdCliente");
 
+                    b.HasIndex("IdUsuario");
+
                     b.ToTable("Ventas");
+                });
+
+            modelBuilder.Entity("DetalleCompraProveedor", b =>
+                {
+                    b.HasOne("GestionDespensa1.BD.Data.Entity.CompraProveedor", "CompraProveedor")
+                        .WithMany("DetallesCompra")
+                        .HasForeignKey("IdCompra")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GestionDespensa1.BD.Data.Entity.Producto", "Producto")
+                        .WithMany("DetallesCompra")
+                        .HasForeignKey("IdProducto")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompraProveedor");
+
+                    b.Navigation("Producto");
+                });
+
+            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.Caja", b =>
+                {
+                    b.HasOne("GestionDespensa1.BD.Data.Entity.Usuario", "Usuario")
+                        .WithMany("Cajas")
+                        .HasForeignKey("IdUsuario")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.CompraProveedor", b =>
@@ -517,40 +695,48 @@ namespace GestionDespensa1.BD.Migrations
                     b.Navigation("Caja");
                 });
 
-            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.DetalleCompraProveedor", b =>
+            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.DetalleVenta", b =>
                 {
                     b.HasOne("GestionDespensa1.BD.Data.Entity.CompraProveedor", "CompraProveedor")
                         .WithMany("DetallesCompra")
                         .HasForeignKey("IdCompra")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Producto");
+
+                    b.Navigation("Venta");
+                });
+
+            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.MovimientoStock", b =>
+                {
                     b.HasOne("GestionDespensa1.BD.Data.Entity.Producto", "Producto")
-                        .WithMany("DetallesCompra")
+                        .WithMany()
                         .HasForeignKey("IdProducto")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("CompraProveedor");
 
                     b.Navigation("Producto");
                 });
 
-            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.DetalleVenta", b =>
+            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.PagoProveedor", b =>
                 {
                     b.HasOne("GestionDespensa1.BD.Data.Entity.Producto", "Producto")
                         .WithMany("DetallesVenta")
                         .HasForeignKey("IdProducto")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Compra");
+                });
+
+            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.PagoVenta", b =>
+                {
                     b.HasOne("GestionDespensa1.BD.Data.Entity.Venta", "Venta")
-                        .WithMany("DetallesVenta")
+                        .WithMany()
                         .HasForeignKey("IdVenta")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Producto");
 
                     b.Navigation("Venta");
                 });
@@ -593,7 +779,15 @@ namespace GestionDespensa1.BD.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("GestionDespensa1.BD.Data.Entity.Usuario", "Usuario")
+                        .WithMany("Ventas")
+                        .HasForeignKey("IdUsuario")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Cliente");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.Caja", b =>
@@ -626,11 +820,6 @@ namespace GestionDespensa1.BD.Migrations
             modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.Proveedor", b =>
                 {
                     b.Navigation("ComprasProveedor");
-                });
-
-            modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.TipoPago", b =>
-                {
-                    b.Navigation("Pagos");
                 });
 
             modelBuilder.Entity("GestionDespensa1.BD.Data.Entity.Venta", b =>

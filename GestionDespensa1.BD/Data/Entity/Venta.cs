@@ -15,6 +15,11 @@ namespace GestionDespensa1.BD.Data.Entity
         [Display(Name = "ID Cliente")]
         public int IdCliente { get; set; }
 
+        // 👇 NUEVO: ID de usuario (DEBE AGREGARSE)
+        [Required(ErrorMessage = "El ID de usuario es obligatorio.")]
+        [Display(Name = "ID Usuario")]
+        public int IdUsuario { get; set; }
+
         [Required(ErrorMessage = "La fecha de venta es obligatoria.")]
         [Display(Name = "Fecha Venta")]
         public DateTime FechaVenta { get; set; }
@@ -39,7 +44,6 @@ namespace GestionDespensa1.BD.Data.Entity
         [Precision(18, 2)]
         public decimal SaldoPendiente { get; set; }
 
-        // NUEVOS CAMPOS
         [Required(ErrorMessage = "El método de pago es obligatorio.")]
         [MaxLength(50, ErrorMessage = "Máximo número de caracteres {1}.")]
         [Display(Name = "Método de Pago")]
@@ -52,7 +56,11 @@ namespace GestionDespensa1.BD.Data.Entity
         // Navigation properties
         [ForeignKey("IdCliente")]
         public Cliente Cliente { get; set; }
-        
+
+        // 👇 CORREGIDO: Ahora es de tipo Usuario, no object
+        [ForeignKey("IdUsuario")]
+        public Usuario Usuario { get; set; }
+
         public List<DetalleVenta> DetallesVenta { get; set; } = new List<DetalleVenta>();
         public List<Pago> Pagos { get; set; } = new List<Pago>();
     }

@@ -13,12 +13,27 @@ namespace GestionDespensa1.Server.Controllers
     public class VentasControllers : ControllerBase
     {
         private readonly IVentaRepositorio _repositorio;
+        private readonly IDetalleVentaRepositorio _detalleVentaRepositorio;
+        private readonly IUsuarioRepositorio _usuarioRepositorio;
+        private readonly IProductoRepositorio _productoRepositorio;
+        private readonly IMovimientoStockRepositorio _movimientoStockRepositorio;
         private readonly IMapper _mapper;
         private readonly Context _context;
 
-        public VentasControllers(IVentaRepositorio repositorio, IMapper mapper, Context context)
+        public VentasControllers(
+            IVentaRepositorio repositorio,
+            IDetalleVentaRepositorio detalleVentaRepositorio,
+            IUsuarioRepositorio usuarioRepositorio,
+            IProductoRepositorio productoRepositorio,
+            IMovimientoStockRepositorio movimientoStockRepositorio,
+            IMapper mapper,
+            Context context)
         {
             _repositorio = repositorio;
+            _detalleVentaRepositorio = detalleVentaRepositorio;
+            _usuarioRepositorio = usuarioRepositorio;
+            _productoRepositorio = productoRepositorio;
+            _movimientoStockRepositorio = movimientoStockRepositorio;
             _mapper = mapper;
             _context = context;
         }
@@ -28,82 +43,12 @@ namespace GestionDespensa1.Server.Controllers
         {
             try
             {
-                Console.WriteLine("🔍 Iniciando GET /api/Ventas");
-
                 var ventas = await _repositorio.SelectWithRelations();
-                Console.WriteLine($"✅ Ventas encontradas: {ventas?.Count ?? 0}");
-
-                if (ventas == null || !ventas.Any())
-                {
-                    Console.WriteLine("ℹ️  No hay ventas, retornando lista vacía");
-                    return new List<VentaDTO>();
-                }
-
                 var ventasDTO = _mapper.Map<List<VentaDTO>>(ventas);
-                Console.WriteLine($"✅ Mapeo exitoso. DTOs: {ventasDTO.Count}");
-
                 return Ok(ventasDTO);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en GET Ventas: {ex.Message}");
-                Console.WriteLine($"📋 Stack: {ex.StackTrace}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"🔍 Inner: {ex.InnerException.Message}");
-                }
-                return StatusCode(500, $"Error al cargar ventas: {ex.Message}");
-            }
-        }
-
-        // Endpoints de diagnóstico
-        [HttpGet("test")]
-        public ActionResult<string> Test()
-        {
-            return "✅ Controller de Ventas funcionando correctamente";
-        }
-
-        [HttpGet("count")]
-        public async Task<ActionResult<int>> GetCount()
-        {
-            try
-            {
-                var count = await _context.Ventas.CountAsync();
-                Console.WriteLine($"📊 Total ventas en BD: {count}");
-                return count;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error en count: {ex.Message}");
-                return BadRequest($"Error count: {ex.Message}");
-            }
-        }
-
-        [HttpGet("simple")]
-        public async Task<ActionResult<List<VentaDTO>>> GetSimple()
-        {
-            try
-            {
-                var ventas = await _context.Ventas
-                    .Include(v => v.Cliente)
-                    .Select(v => new VentaDTO
-                    {
-                        Id = v.Id,
-                        IdCliente = v.IdCliente,
-                        FechaVenta = v.FechaVenta,
-                        Estado = v.Estado,
-                        Total = v.Total,
-                        MontoPagado = v.MontoPagado,
-                        SaldoPendiente = v.SaldoPendiente
-                    })
-                    .ToListAsync();
-
-                Console.WriteLine($"✅ GetSimple exitoso. Ventas: {ventas.Count}");
-                return Ok(ventas);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error en GetSimple: {ex.Message}");
                 return StatusCode(500, $"Error: {ex.Message}");
             }
         }
@@ -113,62 +58,15 @@ namespace GestionDespensa1.Server.Controllers
         {
             try
             {
-                Console.WriteLine($"🔍 Buscando venta ID: {id}");
-
                 var venta = await _repositorio.SelectByIdWithRelations(id);
                 if (venta == null)
-                {
-                    Console.WriteLine($"❌ Venta {id} no encontrada");
                     return NotFound();
-                }
 
                 var ventaDTO = _mapper.Map<VentaDTO>(venta);
-                Console.WriteLine($"✅ Venta encontrada: ID {ventaDTO.Id}");
                 return Ok(ventaDTO);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en GET {id}: {ex.Message}");
-                return BadRequest($"Error: {ex.Message}");
-            }
-        }
-
-        [HttpGet("GetByCliente/{clienteId:int}")]
-        public async Task<ActionResult<List<VentaDTO>>> GetByCliente(int clienteId)
-        {
-            try
-            {
-                Console.WriteLine($"🔍 Buscando ventas por cliente: {clienteId}");
-
-                var ventas = await _repositorio.GetByCliente(clienteId);
-                var ventasDTO = _mapper.Map<List<VentaDTO>>(ventas);
-
-                Console.WriteLine($"✅ Ventas encontradas para cliente {clienteId}: {ventasDTO.Count}");
-                return Ok(ventasDTO);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error en GetByCliente {clienteId}: {ex.Message}");
-                return BadRequest($"Error: {ex.Message}");
-            }
-        }
-
-        [HttpGet("GetByFecha/{fecha}")]
-        public async Task<ActionResult<List<VentaDTO>>> GetByFecha(DateTime fecha)
-        {
-            try
-            {
-                Console.WriteLine($"🔍 Buscando ventas por fecha: {fecha:yyyy-MM-dd}");
-
-                var ventas = await _repositorio.GetByFecha(fecha);
-                var ventasDTO = _mapper.Map<List<VentaDTO>>(ventas);
-
-                Console.WriteLine($"✅ Ventas encontradas para fecha {fecha:yyyy-MM-dd}: {ventasDTO.Count}");
-                return Ok(ventasDTO);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error en GetByFecha {fecha:yyyy-MM-dd}: {ex.Message}");
                 return BadRequest($"Error: {ex.Message}");
             }
         }
@@ -178,115 +76,309 @@ namespace GestionDespensa1.Server.Controllers
         {
             try
             {
-                Console.WriteLine($"🔍 Buscando ventas con saldo pendiente");
-
                 var ventas = await _repositorio.GetVentasConSaldoPendiente();
                 var ventasDTO = _mapper.Map<List<VentaDTO>>(ventas);
-
-                Console.WriteLine($"✅ Ventas con saldo pendiente encontradas: {ventasDTO.Count}");
                 return Ok(ventasDTO);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en GetConSaldoPendiente: {ex.Message}");
                 return BadRequest($"Error: {ex.Message}");
             }
         }
 
-        [HttpGet("existe/{id:int}")]
-        public async Task<ActionResult<bool>> Existe(int id)
+        [HttpGet("GetResumenPorFecha/{fecha}")]
+        public async Task<ActionResult<ResumenVentasDTO>> GetResumenPorFecha(DateTime fecha)
         {
             try
             {
-                var existe = await _repositorio.Existe(id);
-                Console.WriteLine($"✅ Existe venta {id}: {existe}");
-                return existe;
+                var ventasDelDia = await _repositorio.GetByFecha(fecha);
+                var ventasCompletadas = ventasDelDia
+                    .Where(v => v.Estado == "Pagado" || v.Estado == "Completada")
+                    .ToList();
+
+                // Obtener la caja del día
+                var caja = await _context.Cajas
+                    .FirstOrDefaultAsync(c => c.Fecha.Date == fecha.Date);
+
+                // Obtener egresos del día
+                decimal egresos = 0;
+                if (caja != null)
+                {
+                    egresos = await _context.DetallesCaja
+                        .Where(d => d.IdCaja == caja.Id && d.Tipo == "EGRESO")
+                        .SumAsync(d => d.Monto);
+                }
+
+                // Obtener ingresos por medio de pago desde DetallesCaja
+                decimal ingresosEfectivo = 0;
+                decimal ingresosTransferencia = 0;
+                decimal ingresosTarjeta = 0;
+
+                if (caja != null)
+                {
+                    ingresosEfectivo = await _context.DetallesCaja
+                        .Where(d => d.IdCaja == caja.Id && d.Tipo == "INGRESO" && d.Concepto.Contains("Efectivo"))
+                        .SumAsync(d => d.Monto);
+
+                    ingresosTransferencia = await _context.DetallesCaja
+                        .Where(d => d.IdCaja == caja.Id && d.Tipo == "INGRESO" && d.Concepto.Contains("Transferencia"))
+                        .SumAsync(d => d.Monto);
+
+                    ingresosTarjeta = await _context.DetallesCaja
+                        .Where(d => d.IdCaja == caja.Id && d.Tipo == "INGRESO" && d.Concepto.Contains("Tarjeta"))
+                        .SumAsync(d => d.Monto);
+                }
+
+                // Obtener pagos de clientes (deudas)
+                var pagosClientesEfectivo = await _context.PagosVenta
+                    .Where(p => p.Fecha.Date == fecha.Date && p.MedioPago == "Efectivo")
+                    .SumAsync(p => p.Monto);
+
+                var pagosClientesTransferencia = await _context.PagosVenta
+                    .Where(p => p.Fecha.Date == fecha.Date && p.MedioPago == "Transferencia")
+                    .SumAsync(p => p.Monto);
+
+                var pagosClientesTarjeta = await _context.PagosVenta
+                    .Where(p => p.Fecha.Date == fecha.Date && p.MedioPago == "Tarjeta")
+                    .SumAsync(p => p.Monto);
+
+                // Obtener pagos a proveedores
+                var pagosProveedoresEfectivo = await _context.PagosProveedor
+                    .Where(p => p.Fecha.Date == fecha.Date && p.MedioPago == "EFECTIVO")
+                    .SumAsync(p => p.Monto);
+
+                var pagosProveedoresTransferencia = await _context.PagosProveedor
+                    .Where(p => p.Fecha.Date == fecha.Date && p.MedioPago == "TRANSFERENCIA")
+                    .SumAsync(p => p.Monto);
+
+                // Obtener gastos varios
+                var gastosEfectivo = await _context.DetallesCaja
+                    .Where(d => d.Fecha.Date == fecha.Date && d.Tipo == "EGRESO" && !d.Concepto.Contains("Compra") && d.Concepto.Contains("EFECTIVO"))
+                    .SumAsync(d => d.Monto);
+
+                var gastosTransferencia = await _context.DetallesCaja
+                    .Where(d => d.Fecha.Date == fecha.Date && d.Tipo == "EGRESO" && !d.Concepto.Contains("Compra") && d.Concepto.Contains("TRANSFERENCIA"))
+                    .SumAsync(d => d.Monto);
+
+                // Obtener detalle de egresos
+                var egresosProveedores = await _context.PagosProveedor
+                    .Include(p => p.Compra)
+                        .ThenInclude(c => c.Proveedor)
+                    .Where(p => p.Fecha.Date == fecha.Date)
+                    .Select(p => new DetalleEgresoDTO
+                    {
+                        Id = p.Id,
+                        Fecha = p.Fecha,
+                        Concepto = $"Pago a proveedor: {p.Compra.Proveedor.Nombre}",
+                        Monto = p.Monto,
+                        MedioPago = p.MedioPago,
+                        Tipo = "PROVEEDOR",
+                        Referencia = $"Compra #{p.IdCompra}",
+                        Proveedor = p.Compra.Proveedor.Nombre
+                    }).ToListAsync();
+
+                var egresosGastos = await _context.DetallesCaja
+                    .Where(d => d.Fecha.Date == fecha.Date && d.Tipo == "EGRESO" && !d.Concepto.Contains("Compra"))
+                    .Select(d => new DetalleEgresoDTO
+                    {
+                        Id = d.Id,
+                        Fecha = d.Fecha,
+                        Concepto = d.Concepto,
+                        Monto = d.Monto,
+                        MedioPago = "EFECTIVO",
+                        Tipo = "GASTO",
+                        Referencia = d.Referencia
+                    }).ToListAsync();
+
+                var detalleEgresos = egresosProveedores.Concat(egresosGastos).OrderByDescending(e => e.Fecha).ToList();
+
+                var resumen = new ResumenVentasDTO
+                {
+                    // Ventas del día (desde la tabla Ventas)
+                    TotalVentas = ventasCompletadas.Sum(v => v.Total),
+                    TotalEfectivo = ventasCompletadas.Where(v => v.MetodoPago.Contains("Efectivo")).Sum(v => v.Total),
+                    TotalTarjeta = ventasCompletadas.Where(v => v.MetodoPago.Contains("Tarjeta")).Sum(v => v.Total),
+                    TotalTransferencia = ventasCompletadas.Where(v => v.MetodoPago.Contains("Transferencia")).Sum(v => v.Total),
+                    CantidadVentas = ventasCompletadas.Count,
+
+                    // Pagos de clientes (deudas)
+                    PagosClientesEfectivo = pagosClientesEfectivo,
+                    PagosClientesTransferencia = pagosClientesTransferencia,
+                    PagosClientesTarjeta = pagosClientesTarjeta,
+
+                    // Pagos a proveedores
+                    PagosProveedoresEfectivo = pagosProveedoresEfectivo,
+                    PagosProveedoresTransferencia = pagosProveedoresTransferencia,
+
+                    // Gastos varios
+                    GastosEfectivo = gastosEfectivo,
+                    GastosTransferencia = gastosTransferencia,
+
+                    // Egresos totales y detalle
+                    TotalEgresos = egresos,
+                    DetalleEgresos = detalleEgresos,
+
+                    // Ingresos reales en caja (desde DetallesCaja)
+                    TotalIngresosEfectivo = ingresosEfectivo,
+                    TotalIngresosTransferencia = ingresosTransferencia,
+                    TotalIngresosTarjeta = ingresosTarjeta,
+
+                    // Caja
+                    ImporteInicio = caja?.ImporteInicio ?? 0,
+                    ImporteCierre = caja?.ImporteCierre
+                };
+
+                // Calcular Totales por medio de pago esperados
+                resumen.EfectivoEsperado = resumen.ImporteInicio + resumen.TotalIngresosEfectivo - (resumen.PagosProveedoresEfectivo + resumen.GastosEfectivo);
+                resumen.TransferenciaEsperada = resumen.TotalIngresosTransferencia - (resumen.PagosProveedoresTransferencia + resumen.GastosTransferencia);
+                resumen.TarjetaEsperada = resumen.TotalIngresosTarjeta;
+                resumen.TotalEsperado = resumen.EfectivoEsperado + resumen.TransferenciaEsperada + resumen.TarjetaEsperada;
+                resumen.Diferencia = (resumen.ImporteCierre ?? 0) - resumen.TotalEsperado;
+                resumen.ValidacionMediosPago = Math.Abs(resumen.TotalVentas - (resumen.TotalEfectivo + resumen.TotalTarjeta + resumen.TotalTransferencia)) < 0.01m;
+
+                return Ok(resumen);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en Existe {id}: {ex.Message}");
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
         }
 
         [HttpPost]
         public async Task<ActionResult<int>> Post(CrearVentaDTO crearVentaDTO)
         {
-            Console.WriteLine("=== JSON RECIBIDO ===");
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(crearVentaDTO));
-
-            var clienteExiste = await _context.Clientes
-                .AnyAsync(c => c.Id == crearVentaDTO.IdCliente);
-
-            if (!clienteExiste)
-                return BadRequest($"El cliente {crearVentaDTO.IdCliente} no existe.");
-
-            // Crear la venta
-            var venta = new Venta
+            try
             {
-                IdCliente = crearVentaDTO.IdCliente,
-                FechaVenta = DateTime.Now,
-                MetodoPago = crearVentaDTO.MetodoPago,
-                MontoPagado = crearVentaDTO.MontoPagado,
-                DetallesVenta = new List<DetalleVenta>()
-            };
+                // Validar que existe una caja abierta para hoy
+                var cajaHoy = await _context.Cajas
+                    .FirstOrDefaultAsync(c => c.Fecha.Date == DateTime.Today.Date && c.Estado == "Abierta");
 
-            foreach (var detDTO in crearVentaDTO.DetallesVenta)
-            {
-                venta.DetallesVenta.Add(new DetalleVenta
+                if (cajaHoy == null)
                 {
-                    IdProducto = detDTO.IdProducto,
-                    Cantidad = detDTO.Cantidad,
-                    PrecioUnitario = detDTO.PrecioUnitario
-                });
-            }
+                    return BadRequest("❌ No se puede realizar la venta porque no hay una caja abierta para hoy. Por favor, abra una caja primero.");
+                }
 
-            venta.Total = venta.DetallesVenta.Sum(d => d.Cantidad * d.PrecioUnitario);
-            venta.SaldoPendiente = venta.Total - venta.MontoPagado;
-            venta.Estado = venta.SaldoPendiente <= 0 ? "Pagado" : "Pendiente";
+                // Validar usuario
+                var usuario = await _usuarioRepositorio.SelectById(crearVentaDTO.IdUsuario);
+                if (usuario == null)
+                    return BadRequest("El usuario no existe");
 
-            // 🔁 Usar la estrategia de ejecución para manejar reintentos automáticos
-            var strategy = _context.Database.CreateExecutionStrategy();
-
-            await strategy.ExecuteAsync(async () =>
-            {
-                // Iniciar transacción manual DENTRO de la estrategia
-                using var transaction = await _context.Database.BeginTransactionAsync();
-
-                try
+                // Validar stock suficiente
+                foreach (var detalle in crearVentaDTO.DetallesVenta)
                 {
-                    // Validar y descontar stock
-                    foreach (var det in venta.DetallesVenta)
+                    var producto = await _productoRepositorio.SelectByIdWithRelations(detalle.IdProducto);
+                    if (producto == null)
+                        return BadRequest($"Producto ID {detalle.IdProducto} no existe");
+
+                    if (producto.StockActual < detalle.Cantidad)
+                        return BadRequest($"Stock insuficiente para {producto.Descripcion}. Disponible: {producto.StockActual}");
+                }
+
+                // Crear venta
+                var venta = _mapper.Map<Venta>(crearVentaDTO);
+                var idVenta = await _repositorio.Insert(venta);
+                if (idVenta <= 0)
+                    return BadRequest("No se pudo crear la venta");
+
+                // Procesar detalles y stock
+                foreach (var detalle in crearVentaDTO.DetallesVenta)
+                {
+                    // Insertar detalle
+                    var detalleVenta = new DetalleVenta
                     {
-                        var producto = await _context.Productos
-                            .FirstOrDefaultAsync(p => p.Id == det.IdProducto);
+                        IdVenta = idVenta,
+                        IdProducto = detalle.IdProducto,
+                        Cantidad = detalle.Cantidad,
+                        PrecioUnitario = detalle.PrecioUnitario
+                    };
+                    await _detalleVentaRepositorio.Insert(detalleVenta);
 
-                        if (producto == null)
-                            throw new Exception($"Producto ID {det.IdProducto} no existe.");
+                    // Actualizar stock
+                    var producto = await _productoRepositorio.SelectByIdWithRelations(detalle.IdProducto);
+                    if (producto != null)
+                    {
+                        int stockAnterior = producto.StockActual;
+                        producto.StockActual -= detalle.Cantidad;
+                        await _productoRepositorio.Update(producto.Id, producto);
 
-                        if (producto.StockActual < det.Cantidad)
-                            throw new Exception($"Stock insuficiente para {producto.Descripcion}.");
-
-                        producto.StockActual -= det.Cantidad;
+                        // Registrar movimiento de stock
+                        var movimiento = new MovimientoStock
+                        {
+                            IdProducto = detalle.IdProducto,
+                            Tipo = "VENTA",
+                            Cantidad = detalle.Cantidad,
+                            Fecha = DateTime.Now,
+                            Referencia = $"Venta #{idVenta}",
+                            StockAnterior = stockAnterior,
+                            StockNuevo = producto.StockActual
+                        };
+                        await _movimientoStockRepositorio.Insert(movimiento);
                     }
-
-                    _context.Ventas.Add(venta);
-                    await _context.SaveChangesAsync();
-
-                    await transaction.CommitAsync();
-
-                    Console.WriteLine($"✅ Venta creada con ID {venta.Id}");
                 }
-                catch (Exception ex)
+
+                // Registrar ingresos en caja por cada medio de pago
+                bool hayIngresos = false;
+
+                if (crearVentaDTO.PagoEfectivo > 0)
                 {
-                    await transaction.RollbackAsync();
-                    Console.WriteLine("ERROR COMPLETO:");
-                    Console.WriteLine(ex.ToString());
-                    throw;
+                    var detalleCajaEfectivo = new DetalleCaja
+                    {
+                        IdCaja = cajaHoy.Id,
+                        Tipo = "INGRESO",
+                        Concepto = $"Venta #{idVenta} - Efectivo",
+                        Monto = crearVentaDTO.PagoEfectivo,
+                        Fecha = DateTime.Now,
+                        Referencia = $"Venta #{idVenta}"
+                    };
+                    _context.DetallesCaja.Add(detalleCajaEfectivo);
+                    hayIngresos = true;
+                    Console.WriteLine($"✅ Registrado pago en efectivo: {crearVentaDTO.PagoEfectivo:C}");
                 }
-            });
 
-            return Ok(venta.Id);
+                if (crearVentaDTO.PagoTransferencia > 0)
+                {
+                    var detalleCajaTransferencia = new DetalleCaja
+                    {
+                        IdCaja = cajaHoy.Id,
+                        Tipo = "INGRESO",
+                        Concepto = $"Venta #{idVenta} - Transferencia",
+                        Monto = crearVentaDTO.PagoTransferencia,
+                        Fecha = DateTime.Now,
+                        Referencia = $"Venta #{idVenta}"
+                    };
+                    _context.DetallesCaja.Add(detalleCajaTransferencia);
+                    hayIngresos = true;
+                    Console.WriteLine($"✅ Registrado pago por transferencia: {crearVentaDTO.PagoTransferencia:C}");
+                }
+
+                if (crearVentaDTO.PagoTarjeta > 0)
+                {
+                    var detalleCajaTarjeta = new DetalleCaja
+                    {
+                        IdCaja = cajaHoy.Id,
+                        Tipo = "INGRESO",
+                        Concepto = $"Venta #{idVenta} - Tarjeta",
+                        Monto = crearVentaDTO.PagoTarjeta,
+                        Fecha = DateTime.Now,
+                        Referencia = $"Venta #{idVenta}"
+                    };
+                    _context.DetallesCaja.Add(detalleCajaTarjeta);
+                    hayIngresos = true;
+                    Console.WriteLine($"✅ Registrado pago con tarjeta: {crearVentaDTO.PagoTarjeta:C}");
+                }
+
+                if (hayIngresos)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(idVenta);
+            }
+            catch (Exception err)
+            {
+                Console.WriteLine($"❌ Error en POST Venta: {err.Message}");
+                return BadRequest(err.Message);
+            }
         }
 
         [HttpPut("{id:int}")]
@@ -294,133 +386,37 @@ namespace GestionDespensa1.Server.Controllers
         {
             try
             {
-                Console.WriteLine($"✏️ Intentando actualizar venta {id}");
-
                 if (id != ventaDTO.Id)
-                {
-                    Console.WriteLine($"❌ IDs no coinciden: {id} vs {ventaDTO.Id}");
-                    return BadRequest("Datos Incorrectos");
-                }
+                    return BadRequest("IDs no coinciden");
 
                 var venta = _mapper.Map<Venta>(ventaDTO);
                 var resultado = await _repositorio.Update(id, venta);
 
                 if (!resultado)
-                {
-                    Console.WriteLine($"❌ No se pudo actualizar venta {id}");
-                    return BadRequest("No se pudo actualizar la venta");
-                }
+                    return BadRequest("No se pudo actualizar");
 
-                Console.WriteLine($"✅ Venta {id} actualizada correctamente");
                 return Ok();
             }
             catch (Exception e)
             {
-                Console.WriteLine($"❌ Error en PUT Venta {id}: {e.Message}");
                 return BadRequest(e.Message);
             }
         }
-        [HttpGet("GetResumenPorFecha/{fecha}")]
-        public async Task<ActionResult<ResumenVentasDTO>> GetResumenPorFecha(DateTime fecha)
-        {
-            try
-            {
-                Console.WriteLine($"📊 Buscando resumen de ventas por fecha: {fecha:yyyy-MM-dd}");
 
-                // Obtener ventas del día usando tu repositorio
-                var ventasDelDia = await _repositorio.GetByFecha(fecha);
-
-                // Filtrar solo ventas completadas/pagadas (ajusta según tus estados)
-                var ventasCompletadas = ventasDelDia
-                    .Where(v => v.Estado == "Completada" ||
-                               v.Estado == "Pagado" ||
-                               v.Estado == "Finalizada" ||
-                               v.Estado == "Entregada") // Agrega los estados que uses
-                    .ToList();
-
-                Console.WriteLine($"📈 Ventas del día: {ventasCompletadas.Count} completadas de {ventasDelDia.Count} totales");
-
-                // Calcular resumen
-                var resumen = new ResumenVentasDTO
-                {
-                    TotalVentas = ventasCompletadas.Sum(v => v.Total),
-                    TotalEfectivo = ventasCompletadas.Where(v => v.MetodoPago == "Efectivo").Sum(v => v.Total),
-                    TotalTarjeta = ventasCompletadas.Where(v => v.MetodoPago == "Tarjeta").Sum(v => v.Total),
-                    TotalTransferencia = ventasCompletadas.Where(v => v.MetodoPago == "Transferencia").Sum(v => v.Total),
-                    CantidadVentas = ventasCompletadas.Count,
-                    ImporteInicio = 0, // Se establecerá desde el frontend
-                    TotalEgresos = 0   // Se establecerá desde el frontend
-                };
-
-                // Log para debugging
-                Console.WriteLine($"💰 Resumen calculado:");
-                Console.WriteLine($"   - Total Ventas: {resumen.TotalVentas:C}");
-                Console.WriteLine($"   - Efectivo: {resumen.TotalEfectivo:C}");
-                Console.WriteLine($"   - Tarjeta: {resumen.TotalTarjeta:C}");
-                Console.WriteLine($"   - Transferencia: {resumen.TotalTransferencia:C}");
-                Console.WriteLine($"   - Cantidad: {resumen.CantidadVentas}");
-
-                // Validar que la suma de medios de pago coincida con el total
-                var sumaMedios = resumen.TotalEfectivo + resumen.TotalTarjeta + resumen.TotalTransferencia;
-                var diferencia = Math.Abs(resumen.TotalVentas - sumaMedios);
-
-                if (diferencia > 0.01m)
-                {
-                    Console.WriteLine($"⚠️  Advertencia: Diferencia en medios de pago: {diferencia:C}");
-                }
-
-                return Ok(resumen);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error en GetResumenPorFecha {fecha:yyyy-MM-dd}: {ex.Message}");
-                Console.WriteLine($"📋 Stack: {ex.StackTrace}");
-                return StatusCode(500, $"Error interno del servidor: {ex.Message}");
-            }
-        }
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> Delete(int id)
         {
             try
             {
-                var venta = await _context.Ventas
-                    .Include(v => v.DetallesVenta)
-                    .Include(v => v.Pagos)
-                    .FirstOrDefaultAsync(v => v.Id == id);
-
-                if (venta == null)
-                    return NotFound();
-
-                // 🔄 Devolver stock
-                var productosIds = venta.DetallesVenta.Select(d => d.IdProducto).ToList();
-
-                var productos = await _context.Productos
-                    .Where(p => productosIds.Contains(p.Id))
-                    .ToListAsync();
-
-                foreach (var det in venta.DetallesVenta)
-                {
-                    var producto = productos.First(p => p.Id == det.IdProducto);
-                    producto.StockActual += det.Cantidad;
-                }
-
-                // Eliminar pagos
-                if (venta.Pagos != null && venta.Pagos.Any())
-                    _context.Pagos.RemoveRange(venta.Pagos);
-
-                // Eliminar detalles
-                if (venta.DetallesVenta != null && venta.DetallesVenta.Any())
-                    _context.DetallesVenta.RemoveRange(venta.DetallesVenta);
-
-                _context.Ventas.Remove(venta);
-
-                await _context.SaveChangesAsync();
+                var resultado = await _repositorio.Delete(id);
+                if (!resultado)
+                    return BadRequest("No se pudo eliminar");
 
                 return Ok();
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest($"Error: {ex.Message}");
             }
         }
     }

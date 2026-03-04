@@ -1,7 +1,8 @@
 ﻿@page "/proveedores/detalles/{Id:int}"
-@using GestionDespensa1.Shared.DTO
-@using GestionDespensa1.Client.Servicios.Entidades
 @using System.Globalization
+@using GestionDespensa1.Client.Servicios.Auth
+@using GestionDespensa1.Client.Servicios.Entidades
+@using GestionDespensa1.Shared.DTO
 @inject IProveedorService ProveedorService
 @inject ICompraProveedorService CompraProveedorService
 @inject NavigationManager Navigation
@@ -310,7 +311,7 @@
                                 <span class="fw-bold">
                                     @{
                                         var mesActual = DateTime.Now.ToString("yyyy-MM");
-                                        var comprasEsteMes = compras?.Count(c => !string.IsNullOrEmpty(c.FechaCompra) && c.FechaCompra.StartsWith(mesActual)) ?? 0;
+                                        var comprasEsteMes = compras?.Count(c => c.FechaCompra.ToString("yyyy-MM") == mesActual) ?? 0;
                                     }
                                     @comprasEsteMes
                                 </span>
@@ -359,26 +360,20 @@
                         else
                         {
                             // Intentar parsear fechas, si falla usar strings
-                            var fechasStrings = compras
-                            .Where(c => !string.IsNullOrEmpty(c.FechaCompra))
-                            .Select(c => c.FechaCompra)
-                            .OrderBy(d => d)
-                            .ToList();
+                            var fechas = compras
+                                .Select(c => c.FechaCompra)
+                                .OrderBy(d => d)
+                                .ToList();
 
-                            if (fechasStrings.Count >= 2)
+                            if (fechas.Count >= 2)
                             {
-                                // Calcular días entre fechas si están en formato válido
                                 int totalDias = 0;
                                 int comparacionesValidas = 0;
 
-                                for (int i = 1; i < fechasStrings.Count; i++)
+                                for (int i = 1; i < fechas.Count; i++)
                                 {
-                                    if (DateTime.TryParse(fechasStrings[i], out var fechaActual) &&
-                                    DateTime.TryParse(fechasStrings[i - 1], out var fechaAnterior))
-                                    {
-                                        totalDias += (fechaActual - fechaAnterior).Days;
-                                        comparacionesValidas++;
-                                    }
+                                    totalDias += (fechas[i] - fechas[i - 1]).Days;
+                                    comparacionesValidas++;
                                 }
 
                                 if (comparacionesValidas > 0)

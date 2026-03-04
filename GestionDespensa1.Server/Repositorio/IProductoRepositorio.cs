@@ -13,5 +13,6 @@ namespace GestionDespensa1.Server.Repositorio
         Task<int> Insert(Producto producto);
         Task<bool> Update(int id, Producto producto);
         Task<bool> Delete(int id);
+        Task SelectById(int idProducto);
     }
 }

@@ -1,0 +1,156 @@
+﻿@page "/registro"
+@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Auth
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Registro - Gestión Despensa</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white text-center py-3">
+                    <i class="fas fa-user-plus fa-3x mb-2"></i>
+                    <h4 class="mb-0">Registro de Usuario</h4>
+                </div>
+                <div class="card-body p-4">
+                    <EditForm Model="registroModel" OnValidSubmit="HandleRegistro">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="alert alert-danger" />
+
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Nombre Completo</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <InputText @bind-Value="registroModel.Nombre" 
+                                           class="form-control" 
+                                           placeholder="Ingrese su nombre" />
+                            </div>
+                            <ValidationMessage For="@(() => registroModel.Nombre)" 
+                                               class="text-danger small" />
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <InputText @bind-Value="registroModel.Email" 
+                                           class="form-control" 
+                                           placeholder="ejemplo@correo.com" />
+                            </div>
+                            <ValidationMessage For="@(() => registroModel.Email)" 
+                                               class="text-danger small" />
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <InputText type="password" 
+                                           @bind-Value="registroModel.Password" 
+                                           class="form-control" 
+                                           placeholder="Mínimo 6 caracteres" />
+                            </div>
+                            <ValidationMessage For="@(() => registroModel.Password)" 
+                                               class="text-danger small" />
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">Rol</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+                                <InputSelect @bind-Value="registroModel.Rol" class="form-control">
+                                    <option value="EMPLEADO">Empleado</option>
+                                    <option value="ADMIN">Administrador</option>
+                                </InputSelect>
+                            </div>
+                            <small class="text-muted">Seleccione el rol del usuario</small>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg" disabled="@cargando">
+                                @if (cargando)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-user-plus me-2"></i>
+                                }
+                                @(cargando ? "Registrando..." : "Registrarse")
+                            </button>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(error))
+                        {
+                            <div class="alert alert-danger mt-3">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                @error
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(mensajeExito))
+                        {
+                            <div class="alert alert-success mt-3">
+                                <i class="fas fa-check-circle me-2"></i>
+                                @mensajeExito
+                            </div>
+                        }
+                    </EditForm>
+
+                    <hr class="my-4" />
+                    <div class="text-center">
+                        <p class="mb-0">
+                            ¿Ya tenés cuenta? 
+                            <a href="/login" class="text-success fw-bold">Iniciar Sesión</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private CrearUsuarioDTO registroModel = new() { Rol = "EMPLEADO" };
+    private bool cargando = false;
+    private string error = string.Empty;
+    private string mensajeExito = string.Empty;
+
+    private async Task HandleRegistro()
+    {
+        cargando = true;
+        error = string.Empty;
+        mensajeExito = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var respuesta = await AuthService.Registro(registroModel);
+
+            if (!respuesta.Error && respuesta.Respuesta?.Success == true)
+            {
+                mensajeExito = "¡Usuario registrado exitosamente! Redirigiendo al login...";
+                StateHasChanged();
+                
+                await Task.Delay(2000); // Esperar 2 segundos
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                error = respuesta.Respuesta?.Error ?? "Error al registrar usuario";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+}

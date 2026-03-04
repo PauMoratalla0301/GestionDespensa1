@@ -30,7 +30,7 @@ namespace GestionDespensa1.Server.Controllers
             {
                 Console.WriteLine("🔍 Iniciando GET /api/DetallesCaja");
 
-                var detalles = await _repositorio.SelectWithRelations();
+                var detalles = await _repositorio.Select();
                 Console.WriteLine($"✅ Detalles de caja encontrados: {detalles?.Count ?? 0}");
 
                 if (detalles == null || !detalles.Any())
@@ -47,11 +47,6 @@ namespace GestionDespensa1.Server.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error en GET DetallesCaja: {ex.Message}");
-                Console.WriteLine($"📋 Stack: {ex.StackTrace}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"🔍 Inner: {ex.InnerException.Message}");
-                }
                 return StatusCode(500, $"Error al cargar detalles de caja: {ex.Message}");
             }
         }
@@ -87,9 +82,12 @@ namespace GestionDespensa1.Server.Controllers
                     .Select(d => new DetalleCajaDTO
                     {
                         Id = d.Id,
-                        IdVenta = d.IdVenta,
+                        IdCaja = d.IdCaja,
+                        Tipo = d.Tipo,
+                        Concepto = d.Concepto,
                         Monto = d.Monto,
-                        IdCaja = d.IdCaja
+                        Fecha = d.Fecha,
+                        Referencia = d.Referencia
                     })
                     .ToListAsync();
 
@@ -110,7 +108,8 @@ namespace GestionDespensa1.Server.Controllers
             {
                 Console.WriteLine($"🔍 Buscando detalle de caja ID: {id}");
 
-                var detalle = await _repositorio.SelectByIdWithRelations(id);
+                // Cambiar SelectByIdWithRelations por SelectById, ya que no existe el primero en la interfaz
+                var detalle = await _repositorio.SelectById(id);
                 if (detalle == null)
                 {
                     Console.WriteLine($"❌ Detalle de caja {id} no encontrado");
@@ -148,25 +147,48 @@ namespace GestionDespensa1.Server.Controllers
             }
         }
 
-        [HttpGet("GetByVenta/{idVenta}")]
-        public async Task<ActionResult<List<DetalleCajaDTO>>> GetByVenta(string idVenta)
+        [HttpGet("GetByFecha/{fecha}")]
+        public async Task<ActionResult<List<DetalleCajaDTO>>> GetByFecha(DateTime fecha)
         {
             try
             {
-                Console.WriteLine($"🔍 Buscando detalles por venta: {idVenta}");
+                Console.WriteLine($"🔍 Buscando detalles por fecha: {fecha:yyyy-MM-dd}");
 
-                var detalles = await _repositorio.GetByVenta(idVenta);
+                var detalles = await _repositorio.GetByFecha(fecha);
                 var detallesDTO = _mapper.Map<List<DetalleCajaDTO>>(detalles);
 
-                Console.WriteLine($"✅ Detalles encontrados para venta {idVenta}: {detallesDTO.Count}");
+                Console.WriteLine($"✅ Detalles encontrados para fecha {fecha:yyyy-MM-dd}: {detallesDTO.Count}");
                 return Ok(detallesDTO);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en GetByVenta {idVenta}: {ex.Message}");
+                Console.WriteLine($"❌ Error en GetByFecha {fecha:yyyy-MM-dd}: {ex.Message}");
                 return BadRequest($"Error: {ex.Message}");
             }
         }
+
+        [HttpGet("GetByTipo/{tipo}")]
+        public async Task<ActionResult<List<DetalleCajaDTO>>> GetByTipo(string tipo)
+        {
+            try
+            {
+                Console.WriteLine($"🔍 Buscando detalles por tipo: {tipo}");
+
+                var detalles = await _repositorio.GetByTipo(tipo);
+                var detallesDTO = _mapper.Map<List<DetalleCajaDTO>>(detalles);
+
+                Console.WriteLine($"✅ Detalles encontrados para tipo {tipo}: {detallesDTO.Count}");
+                return Ok(detallesDTO);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error en GetByTipo {tipo}: {ex.Message}");
+                return BadRequest($"Error: {ex.Message}");
+            }
+        }
+
+        // 👇 ELIMINAR COMPLETAMENTE el método GetByVenta (no existe en la entidad)
+        // [HttpGet("GetByVenta/{idVenta}")] ...
 
         [HttpGet("existe/{id:int}")]
         public async Task<ActionResult<bool>> Existe(int id)
@@ -189,12 +211,12 @@ namespace GestionDespensa1.Server.Controllers
         {
             try
             {
-                Console.WriteLine($"📝 Intentando crear detalle de caja para venta: {crearDetalleCajaDTO.IdVenta}");
+                Console.WriteLine($"📝 Intentando crear detalle de caja para caja: {crearDetalleCajaDTO.IdCaja}");
 
                 var detalle = _mapper.Map<DetalleCaja>(crearDetalleCajaDTO);
                 var idCreado = await _repositorio.Insert(detalle);
 
-                if (idCreado == -1)
+                if (idCreado <= 0)
                 {
                     Console.WriteLine($"❌ Error al crear detalle de caja");
                     return BadRequest("No se pudo crear el detalle de caja");

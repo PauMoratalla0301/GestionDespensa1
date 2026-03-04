@@ -1,0 +1,282 @@
+﻿@page "/"
+@using GestionDespensa1.Client.Servicios.Entidades
+@using GestionDespensa1.Shared.DTO
+@inject IDashboardService DashboardService
+@inject NavigationManager Navigation
+
+<PageTitle>Panel de Control - Gestión Despensa</PageTitle>
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4">
+        <i class="fas fa-chart-pie text-success me-2"></i>
+        Panel de Control
+    </h2>
+
+    @if (cargando)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-success" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-3">Cargando datos del dashboard...</p>
+        </div>
+    }
+    else if (dashboard == null)
+    {
+        <div class="alert alert-danger">Error al cargar los datos</div>
+    }
+    else
+    {
+        <!-- Tarjetas de resumen -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Ventas Hoy
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@dashboard.VentasHoy.ToString("C")</div>
+                                <small class="text-muted">@dashboard.CantidadVentasHoy ventas</small>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Ventas del Mes
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@dashboard.VentasMes.ToString("C")</div>
+                                <small class="text-muted">@dashboard.CantidadVentasMes ventas</small>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-calendar-alt fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    Stock Bajo
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@dashboard.ProductosStockBajo</div>
+                                <small class="text-muted">de @dashboard.TotalProductos productos</small>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-boxes fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    Clientes Deudores
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@dashboard.TotalClientesDeudores.ToString("C")</div>
+                                <small class="text-muted">@dashboard.CantidadClientesDeudores clientes</small>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-users fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de ventas últimos 7 días -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="m-0 font-weight-bold">Ventas Últimos 7 Días</h6>
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 300px;">
+                            <canvas id="ventasChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="m-0 font-weight-bold">Estado de Caja</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (dashboard.CajaAbierta)
+                        {
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i> Caja Abierta
+                            </div>
+                            <p><strong>Inicio:</strong> @dashboard.CajaInicio?.ToString("C")</p>
+                            <p><strong>Actual:</strong> @dashboard.CajaActual?.ToString("C")</p>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i> No hay caja abierta hoy
+                            </div>
+                            <button class="btn btn-success w-100" @onclick="AbrirCaja">
+                                <i class="fas fa-plus-circle me-2"></i>Abrir Caja
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Productos más vendidos y últimas ventas -->
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="m-0 font-weight-bold">Productos Más Vendidos (30 días)</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th class="text-center">Cantidad</th>
+                                        <th class="text-end">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var p in dashboard.ProductosMasVendidos)
+                                    {
+                                        <tr>
+                                            <td>@p.Producto</td>
+                                            <td class="text-center">@p.CantidadVendida</td>
+                                            <td class="text-end">@p.TotalVendido.ToString("C")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow">
+                    <div class="card-header bg-danger text-white">
+                        <h6 class="m-0 font-weight-bold">Últimas Ventas</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Cliente</th>
+                                        <th>Total</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var v in dashboard.UltimasVentas)
+                                    {
+                                        <tr>
+                                            <td>@v.Id</td>
+                                            <td>@v.Cliente</td>
+                                            <td class="text-end">@v.Total.ToString("C")</td>
+                                            <td>
+                                                <span class="badge @GetEstadoBadge(v.Estado)">@v.Estado</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DashboardDTO? dashboard;
+    private bool cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDashboard();
+    }
+
+    private async Task CargarDashboard()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        var respuesta = await DashboardService.Get();
+        if (!respuesta.Error)
+        {
+            dashboard = respuesta.Respuesta;
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private string GetEstadoBadge(string estado)
+    {
+        return estado switch
+        {
+            "Pagado" => "bg-success",
+            "Pendiente" => "bg-warning",
+            "Parcial" => "bg-info",
+            "Cancelado" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private void AbrirCaja()
+    {
+        Navigation.NavigateTo("/cajas/nuevo");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && dashboard != null && dashboard.VentasUltimos7Dias.Any())
+        {
+            await CargarGrafico();
+        }
+    }
+
+    private async Task CargarGrafico()
+    {
+        var dias = dashboard!.VentasUltimos7Dias.Select(v => v.DiaSemana).ToArray();
+        var montos = dashboard.VentasUltimos7Dias.Select(v => (double)v.Total).ToArray();
+
+        await JSRuntime.InvokeVoidAsync("crearGraficoVentas", dias, montos);
+    }
+
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; } = null!;
+}

@@ -12,5 +12,6 @@ namespace GestionDespensa1.Server.Repositorio
         Task<int> Insert(CompraProveedor compra);
         Task<bool> Update(int id, CompraProveedor compra);
         Task<bool> Delete(int id);
+        Task<CompraProveedor> SelectById(int idCompra);
     }
 }

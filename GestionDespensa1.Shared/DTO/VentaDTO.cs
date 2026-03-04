@@ -30,7 +30,6 @@ namespace GestionDespensa1.Shared.DTO
         [Required(ErrorMessage = "El saldo pendiente es obligatorio.")]
         public decimal SaldoPendiente { get; set; }
 
-        // NUEVOS CAMPOS
         [Required(ErrorMessage = "El método de pago es obligatorio.")]
         [MaxLength(50, ErrorMessage = "Máximo número de caracteres {1}.")]
         public string MetodoPago { get; set; } = "Efectivo";
@@ -38,10 +37,10 @@ namespace GestionDespensa1.Shared.DTO
         [MaxLength(500, ErrorMessage = "Máximo número de caracteres {1}.")]
         public string? Notas { get; set; }
 
-        // Productos de la venta
         public List<DetalleVentaDTO> DetallesVenta { get; set; } = new List<DetalleVentaDTO>();
 
-        // Información del cliente (opcional, para mostrar)
         public string? NombreCliente { get; set; }
+        public int IdUsuario { get; set; }
+        public string? NombreUsuario { get; set; }
     }
 }

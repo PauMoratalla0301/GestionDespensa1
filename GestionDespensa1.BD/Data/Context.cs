@@ -10,10 +10,12 @@ namespace GestionDespensa1.BD.Data
 {
     public class Context : DbContext
     {
-       
-        //DbSet<T> según mis entidades
-        public DbSet<TipoPago> TiposPago { get; set; }
-        public DbSet<Pago> Pagos { get; set; }
+        public Context(DbContextOptions<Context> options) : base(options)
+        {
+        }
+
+        public DbSet<Usuario> Usuarios { get; set; }
+
         public DbSet<Caja> Cajas { get; set; }
         public DbSet<DetalleCaja> DetallesCaja { get; set; }
         public DbSet<Cliente> Clientes { get; set; }
@@ -24,12 +26,9 @@ namespace GestionDespensa1.BD.Data
         public DbSet<DetalleCompraProveedor> DetallesCompraProveedor { get; set; }
         public DbSet<Proveedor> Proveedores { get; set; }
         public DbSet<Categoria> Categorias { get; set; }
-
-
-        public Context(DbContextOptions<Context> options) : base(options)
-        {
-        }
-
+        public DbSet<MovimientoStock> MovimientosStock { get; set; }
+        public DbSet<PagoVenta> PagosVenta { get; set; }
+        public DbSet<PagoProveedor> PagosProveedor { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             var cascadeFKs = modelBuilder.Model.G­etEntityTypes()

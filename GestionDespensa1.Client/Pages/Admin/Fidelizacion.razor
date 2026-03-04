@@ -1,0 +1,309 @@
+﻿@page "/admin/fidelizacion"
+@using GestionDespensa1.Client.Servicios.Entidades
+@using GestionDespensa1.Client.Servicios.Http
+@using GestionDespensa1.Shared.DTO
+@inject IHttpServicio HttpServicio
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Fidelización de Clientes - Gestión Despensa</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-star text-warning me-2"></i>
+            Fidelización de Clientes
+        </h2>
+        <button class="btn btn-outline-secondary" @onclick="Volver">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+        </button>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <button class="nav-link @(tabActivo == "todos" ? "active" : "")" @onclick="@(() => CambiarTab("todos"))">
+                Todos los Clientes
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(tabActivo == "vip" ? "active" : "")" @onclick="@(() => CambiarTab("vip"))">
+                <i class="fas fa-crown text-warning me-1"></i> Clientes VIP
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(tabActivo == "frecuentes" ? "active" : "")" @onclick="@(() => CambiarTab("frecuentes"))">
+                <i class="fas fa-calendar-check me-1"></i> Frecuentes
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(tabActivo == "nuevos" ? "active" : "")" @onclick="@(() => CambiarTab("nuevos"))">
+                <i class="fas fa-user-plus me-1"></i> Nuevos
+            </button>
+        </li>
+    </ul>
+
+    @if (cargando)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-3">Analizando clientes...</p>
+        </div>
+    }
+    else if (!clientes.Any())
+    {
+        <div class="alert alert-info text-center p-5">
+            <i class="fas fa-users fa-4x mb-3 text-muted"></i>
+            <h5>No hay clientes para analizar</h5>
+        </div>
+    }
+    else
+    {
+        <!-- Tarjetas de resumen -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Total Clientes</h6>
+                        <h3 class="mb-0">@clientes.Count</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Clientes VIP</h6>
+                        <h3 class="mb-0">@clientes.Count(c => c.Categoria == "VIP")</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">Total Compras</h6>
+                        <h3 class="mb-0">@clientes.Sum(c => c.TotalCompras).ToString("C")</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body">
+                        <h6 class="card-title">Puntos Totales</h6>
+                        <h3 class="mb-0">@clientes.Sum(c => c.PuntosAcumulados).ToString("N0")</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de clientes -->
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Análisis de Clientes</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Categoría</th>
+                                <th class="text-end">Compras</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-end">Puntos</th>
+                                <th>Última Compra</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cliente in clientesFiltrados)
+                            {
+                                <tr>
+                                    <td class="fw-bold">
+                                        @cliente.NombreCliente
+                                        <br />
+                                        <small class="text-muted">@cliente.Email</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge @GetCategoriaBadge(cliente.Categoria)">
+                                            @cliente.Categoria
+                                        </span>
+                                    </td>
+                                    <td class="text-end">@cliente.CantidadCompras</td>
+                                    <td class="text-end fw-bold text-success">@cliente.TotalCompras.ToString("C")</td>
+                                    <td class="text-end fw-bold text-primary">@cliente.PuntosAcumulados.ToString("N0")</td>
+                                    <td>@cliente.UltimaCompra.ToString("dd/MM/yyyy")</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-info" @onclick="@(() => VerSugerencias(cliente.IdCliente))" title="Sugerencias">
+                                            <i class="fas fa-lightbulb"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal de sugerencias -->
+@if (mostrarSugerencias)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">Sugerencias para @clienteSeleccionado</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarSugerencias"></button>
+                </div>
+                <div class="modal-body">
+                    @if (cargandoSugerencias)
+                    {
+                        <div class="text-center p-3">
+                            <div class="spinner-border text-info" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (!sugerencias.Any())
+                    {
+                        <div class="alert alert-info">
+                            No hay sugerencias disponibles para este cliente
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row">
+                            @foreach (var prod in sugerencias)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6 class="card-title fw-bold">@prod.Descripcion</h6>
+                                            <p class="card-text">
+                                                Categoría: @prod.Categoria?.NombreCategoria<br />
+                                                Precio: @prod.PrecioUnitario.ToString("C")
+                                            </p>
+                                            <button class="btn btn-sm btn-success" @onclick="@(() => NavegarAVenta(prod.Id))">
+                                                Sugerir en venta
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarSugerencias">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string tabActivo = "todos";
+    private List<ClienteFidelizacionDTO> clientes = new();
+    private List<ClienteFidelizacionDTO> clientesFiltrados => tabActivo switch
+    {
+        "vip" => clientes.Where(c => c.Categoria == "VIP").ToList(),
+        "frecuentes" => clientes.Where(c => c.Categoria == "Frecuente").ToList(),
+        "nuevos" => clientes.Where(c => c.Categoria == "Nuevo").ToList(),
+        _ => clientes
+    };
+    private bool cargando = true;
+
+    // Sugerencias
+    private bool mostrarSugerencias = false;
+    private string? clienteSeleccionado;
+    private List<ProductoDTO> sugerencias = new();
+    private bool cargandoSugerencias = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarClientes();
+    }
+
+    private async Task CargarClientes()
+    {
+        cargando = true;
+        StateHasChanged();
+
+        try
+        {
+            var respuesta = await HttpServicio.Get<List<ClienteFidelizacionDTO>>("api/Fidelizacion/clientes");
+            if (!respuesta.Error)
+            {
+                clientes = respuesta.Respuesta ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void CambiarTab(string tab)
+    {
+        tabActivo = tab;
+    }
+
+    private string GetCategoriaBadge(string categoria)
+    {
+        return categoria switch
+        {
+            "VIP" => "bg-warning text-dark",
+            "Frecuente" => "bg-success",
+            "Nuevo" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+
+    private async Task VerSugerencias(int idCliente)
+    {
+        clienteSeleccionado = clientes.FirstOrDefault(c => c.IdCliente == idCliente)?.NombreCliente;
+        mostrarSugerencias = true;
+        cargandoSugerencias = true;
+        StateHasChanged();
+
+        try
+        {
+            var respuesta = await HttpServicio.Get<List<ProductoDTO>>($"api/Fidelizacion/sugerencias/{idCliente}");
+            if (!respuesta.Error)
+            {
+                sugerencias = respuesta.Respuesta ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+
+        cargandoSugerencias = false;
+        StateHasChanged();
+    }
+
+    private void CerrarSugerencias()
+    {
+        mostrarSugerencias = false;
+        sugerencias.Clear();
+    }
+
+    private void NavegarAVenta(int idProducto)
+    {
+        Navigation.NavigateTo($"/ventas/nuevo?producto={idProducto}");
+        CerrarSugerencias();
+    }
+
+    private void Volver()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

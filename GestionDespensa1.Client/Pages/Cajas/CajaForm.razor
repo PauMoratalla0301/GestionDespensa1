@@ -1,10 +1,12 @@
 ﻿@page "/cajas/nuevo"
 @page "/cajas/editar/{Id:int}"
 @page "/cajas/detalles/{Id:int}"
-@using GestionDespensa1.Shared.DTO
+@using GestionDespensa1.Client.Servicios.Auth
 @using GestionDespensa1.Client.Servicios.Entidades
+@using GestionDespensa1.Shared.DTO
 @inject ICajaService CajaService
 @inject IVentaService VentaService
+@inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
@@ -22,10 +24,19 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group mb-3">
-                        <label for="idUsuario" class="form-label fw-bold">ID Usuario *</label>
-                        <InputText id="idUsuario" @bind-Value="caja.IdUsuario" class="form-control"
-                                   placeholder="Ingrese el ID del usuario" />
-                        <ValidationMessage For="@(() => caja.IdUsuario)" class="text-danger small" />
+                        <label for="usuarioInfo" class="form-label fw-bold">Usuario</label>
+                        <div class="form-control bg-light" id="usuarioInfo">
+                            <i class="fas fa-user-circle me-2 text-primary"></i>
+                            @if (usuarioLogueado != null)
+                            {
+                                <span>@usuarioLogueado.Nombre (@usuarioLogueado.Rol)</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Cargando usuario...</span>
+                            }
+                        </div>
+                        <input type="hidden" @bind="caja.IdUsuario" />
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -80,7 +91,7 @@
 
             @if (Id > 0 && !cajaCerrada)
             {
-                <!-- RESUMEN DEL DÍA -->
+                <!-- RESUMEN DEL DÍA MEJORADO -->
                 <div class="card border-info mb-4">
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Resumen del Día</h5>
@@ -94,34 +105,172 @@
                         }
                         else
                         {
-                            <div class="row">
+                            <!-- Ventas del día -->
+                            <h6 class="mb-3">📊 Ventas del día</h6>
+                            <div class="row mb-4">
                                 <div class="col-md-3">
                                     <div class="text-center p-3 border rounded bg-light">
-                                        <h6 class="text-muted mb-1">Ventas Totales</h6>
-                                        <h4 class="text-primary mb-0">$ @resumenVentas.TotalVentas.ToString("N2")</h4>
+                                        <h6 class="text-muted mb-1">Total Ventas</h6>
+                                        <h4 class="text-primary mb-0">@resumenVentas.TotalVentas.ToString("C")</h4>
                                         <small class="text-muted">@resumenVentas.CantidadVentas ventas</small>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="text-center p-3 border rounded bg-light">
-                                        <h6 class="text-muted mb-1">Efectivo</h6>
+                                        <h6 class="text-muted mb-1">Efectivo (Ventas)</h6>
                                         <h4 class="text-success mb-0">@resumenVentas.TotalEfectivo.ToString("C")</h4>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="text-center p-3 border rounded bg-light">
-                                        <h6 class="text-muted mb-1">Tarjetas</h6>
+                                        <h6 class="text-muted mb-1">Tarjetas (Ventas)</h6>
                                         <h4 class="text-info mb-0">@resumenVentas.TotalTarjeta.ToString("C")</h4>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="text-center p-3 border rounded bg-light">
-                                        <h6 class="text-muted mb-1">Transferencias</h6>
+                                        <h6 class="text-muted mb-1">Transferencias (Ventas)</h6>
                                         <h4 class="text-warning mb-0">@resumenVentas.TotalTransferencia.ToString("C")</h4>
                                     </div>
                                 </div>
                             </div>
 
+                            <!-- Pagos de clientes (deudas anteriores) -->
+                            @if (resumenVentas.PagosClientesEfectivo > 0 || resumenVentas.PagosClientesTransferencia > 0 || resumenVentas.PagosClientesTarjeta > 0)
+                            {
+                                <h6 class="mb-3">💰 Pagos de clientes (deudas anteriores)</h6>
+                                <div class="row mb-4">
+                                    @if (resumenVentas.PagosClientesEfectivo > 0)
+                                    {
+                                        <div class="col-md-4">
+                                            <div class="text-center p-2 border rounded bg-light">
+                                                <small class="text-muted">Efectivo</small>
+                                                <h5 class="text-success mb-0">@resumenVentas.PagosClientesEfectivo.ToString("C")</h5>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (resumenVentas.PagosClientesTransferencia > 0)
+                                    {
+                                        <div class="col-md-4">
+                                            <div class="text-center p-2 border rounded bg-light">
+                                                <small class="text-muted">Transferencia</small>
+                                                <h5 class="text-warning mb-0">@resumenVentas.PagosClientesTransferencia.ToString("C")</h5>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (resumenVentas.PagosClientesTarjeta > 0)
+                                    {
+                                        <div class="col-md-4">
+                                            <div class="text-center p-2 border rounded bg-light">
+                                                <small class="text-muted">Tarjeta</small>
+                                                <h5 class="text-info mb-0">@resumenVentas.PagosClientesTarjeta.ToString("C")</h5>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            <!-- Egresos (pagos a proveedores y gastos) -->
+                            @if (resumenVentas.DetalleEgresos.Any())
+                            {
+                                <h6 class="mb-3">📉 Egresos del día</h6>
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <div class="text-center p-2 border rounded bg-danger text-white">
+                                            <h6 class="mb-1">Total Egresos</h6>
+                                            <h4 class="mb-0">@resumenVentas.TotalEgresos.ToString("C")</h4>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="table-responsive mb-4">
+                                    <table class="table table-sm table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Concepto</th>
+                                                <th>Monto</th>
+                                                <th>Medio Pago</th>
+                                                <th>Tipo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var egreso in resumenVentas.DetalleEgresos)
+                                            {
+                                                <tr>
+                                                    <td>@egreso.Concepto</td>
+                                                    <td class="fw-bold text-danger">@egreso.Monto.ToString("C")</td>
+                                                    <td>@egreso.MedioPago</td>
+                                                    <td>
+                                                        <span class="badge @(egreso.Tipo == "PROVEEDOR" ? "bg-primary" : "bg-secondary")">
+                                                            @egreso.Tipo
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+
+                            <!-- 💰 Ingresos Reales en Caja (LO MÁS IMPORTANTE) -->
+                            <h6 class="mb-3">💰 Ingresos Reales en Caja</h6>
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 border rounded bg-success text-white">
+                                        <h6 class="mb-1">Efectivo en Caja</h6>
+                                        <h4 class="mb-0">@resumenVentas.TotalIngresosEfectivo.ToString("C")</h4>
+                                        <small class="text-white-50">
+                                            (Ventas: @resumenVentas.TotalEfectivo.ToString("C") |
+                                            Pagos: @resumenVentas.PagosClientesEfectivo.ToString("C"))
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 border rounded bg-warning text-dark">
+                                        <h6 class="mb-1">Transferencias en Caja</h6>
+                                        <h4 class="mb-0">@resumenVentas.TotalIngresosTransferencia.ToString("C")</h4>
+                                        <small>
+                                            (Ventas: @resumenVentas.TotalTransferencia.ToString("C") |
+                                            Pagos: @resumenVentas.PagosClientesTransferencia.ToString("C"))
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 border rounded bg-info text-white">
+                                        <h6 class="mb-1">Tarjetas en Caja</h6>
+                                        <h4 class="mb-0">@resumenVentas.TotalIngresosTarjeta.ToString("C")</h4>
+                                        <small class="text-white-50">
+                                            (Ventas: @resumenVentas.TotalTarjeta.ToString("C") |
+                                            Pagos: @resumenVentas.PagosClientesTarjeta.ToString("C"))
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Totales por medio de pago (esperado) -->
+                            <h6 class="mb-3">💰 Totales por medio de pago (Esperado)</h6>
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <div class="text-center p-2 border rounded bg-success text-white">
+                                        <small>EFECTIVO</small>
+                                        <h5 class="mb-0">@resumenVentas.EfectivoEsperado.ToString("C")</h5>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-2 border rounded bg-warning text-dark">
+                                        <small>TRANSFERENCIA</small>
+                                        <h5 class="mb-0">@resumenVentas.TransferenciaEsperada.ToString("C")</h5>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-2 border rounded bg-info text-white">
+                                        <small>TARJETA</small>
+                                        <h5 class="mb-0">@resumenVentas.TarjetaEsperada.ToString("C")</h5>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resumen final -->
                             <div class="row mt-4">
                                 <div class="col-md-4">
                                     <div class="text-center p-3 border rounded bg-warning text-dark">
@@ -132,7 +281,7 @@
                                 <div class="col-md-4">
                                     <div class="text-center p-3 border rounded bg-success text-white">
                                         <h6 class="mb-1">Total Esperado</h6>
-                                        <h4 class="mb-0">@resumenVentas.TotalIngresos.ToString("C")</h4>
+                                        <h4 class="mb-0">@resumenVentas.TotalEsperado.ToString("C")</h4>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
@@ -143,13 +292,16 @@
                                 </div>
                             </div>
 
+                            <!-- Campo para ingresar efectivo real -->
                             <div class="row mt-3">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-label fw-bold">Importe Cierre *</label>
+                                        <label class="form-label fw-bold">Efectivo Real Contado *</label>
                                         <InputNumber @bind-Value="caja.ImporteCierre" class="form-control"
                                                      step="0.01" min="0" />
-                                        <ValidationMessage For="@(() => caja.ImporteCierre)" class="text-danger small" />
+                                        <small class="text-muted">
+                                            Ingrese el efectivo real que hay en caja (billetes y monedas)
+                                        </small>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -187,6 +339,12 @@
     </div>
 </div>
 
+<style>
+    input[type=hidden] {
+        display: none !important;
+    }
+</style>
+
 @code {
     [Parameter] public int Id { get; set; }
 
@@ -195,9 +353,10 @@
         Fecha = DateTime.Now,
         ImporteInicio = 0,
         Estado = "Abierta",
-        IdUsuario = ""
+        IdUsuario = 0
     };
 
+    private UsuarioDTO? usuarioLogueado;
     private ResumenVentasDTO resumenVentas = new();
     private bool cargando = false;
     private bool resumenCargando = false;
@@ -206,15 +365,40 @@
     private string Titulo => Id == 0 ? "Nueva Caja" : "Editar Caja";
     private string Icono => Id == 0 ? "fa-plus" : "fa-edit";
 
-    private decimal diferencia => (caja.ImporteCierre ?? 0) - (caja.ImporteInicio + resumenVentas.TotalVentas);
+    private decimal diferencia => (caja.ImporteCierre ?? 0) -
+        (resumenVentas.ImporteInicio +
+         resumenVentas.TotalIngresosEfectivo +
+         resumenVentas.TotalIngresosTransferencia +
+         resumenVentas.TotalIngresosTarjeta -
+         resumenVentas.TotalEgresos);
 
     protected override async Task OnInitializedAsync()
     {
+        await CargarUsuarioActual();
+
         if (Id > 0)
         {
             await CargarCaja();
             await CargarResumenVentas();
         }
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        try
+        {
+            usuarioLogueado = await AuthService.GetUsuarioActual();
+            if (usuarioLogueado != null)
+            {
+                caja.IdUsuario = usuarioLogueado.Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando usuario: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", "Error al obtener información del usuario");
+        }
+        StateHasChanged();
     }
 
     private async Task CargarCaja()
@@ -227,7 +411,6 @@
             caja = respuesta.Respuesta;
             cajaCerrada = caja.Estado == "Cerrada";
 
-            // Inicializar resumen con datos de la caja
             resumenVentas.ImporteInicio = caja.ImporteInicio;
             resumenVentas.ImporteCierre = caja.ImporteCierre;
         }
@@ -245,60 +428,58 @@
 
         try
         {
-            // Obtener la fecha de la caja actual
             var fechaCaja = caja.Fecha.Date;
-
-            // Llamar al servicio REAL
             var respuesta = await VentaService.GetResumenPorFecha(fechaCaja);
 
             if (!respuesta.Error && respuesta.Respuesta != null)
             {
                 resumenVentas = respuesta.Respuesta;
-                // Establecer el importe de inicio desde la caja
                 resumenVentas.ImporteInicio = caja.ImporteInicio;
                 resumenVentas.ImporteCierre = caja.ImporteCierre;
             }
             else
             {
-                // En caso de error, mostrar datos vacíos pero reales
                 await JS.InvokeVoidAsync("alert", "⚠️ No se pudieron cargar las ventas del día");
-
-                resumenVentas.TotalVentas = 0;
-                resumenVentas.TotalEfectivo = 0;
-                resumenVentas.TotalTarjeta = 0;
-                resumenVentas.TotalTransferencia = 0;
-                resumenVentas.CantidadVentas = 0;
-                resumenVentas.ImporteInicio = caja.ImporteInicio;
-                resumenVentas.TotalEgresos = 0;
-                resumenVentas.ImporteCierre = caja.ImporteCierre;
+                LimpiarResumen();
             }
         }
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("alert", $"Error al cargar resumen: {ex.Message}");
-
-            // Datos por defecto en caso de error
-            resumenVentas.TotalVentas = 0;
-            resumenVentas.TotalEfectivo = 0;
-            resumenVentas.TotalTarjeta = 0;
-            resumenVentas.TotalTransferencia = 0;
-            resumenVentas.CantidadVentas = 0;
-            resumenVentas.ImporteInicio = caja.ImporteInicio;
-            resumenVentas.TotalEgresos = 0;
-            resumenVentas.ImporteCierre = caja.ImporteCierre;
+            LimpiarResumen();
         }
 
         resumenCargando = false;
         StateHasChanged();
     }
-    private async Task RecalcularTotales()
+
+    private void LimpiarResumen()
     {
-        await CargarResumenVentas();
-        StateHasChanged();
+        resumenVentas.TotalVentas = 0;
+        resumenVentas.TotalEfectivo = 0;
+        resumenVentas.TotalTarjeta = 0;
+        resumenVentas.TotalTransferencia = 0;
+        resumenVentas.CantidadVentas = 0;
+        resumenVentas.ImporteInicio = caja.ImporteInicio;
+        resumenVentas.TotalEgresos = 0;
+        resumenVentas.ImporteCierre = caja.ImporteCierre;
+        resumenVentas.PagosClientesEfectivo = 0;
+        resumenVentas.PagosClientesTransferencia = 0;
+        resumenVentas.PagosClientesTarjeta = 0;
+        resumenVentas.PagosProveedoresEfectivo = 0;
+        resumenVentas.PagosProveedoresTransferencia = 0;
+        resumenVentas.GastosEfectivo = 0;
+        resumenVentas.GastosTransferencia = 0;
+        resumenVentas.DetalleEgresos.Clear();
     }
 
     private async Task GuardarCaja()
     {
+        if (caja.IdUsuario == 0 && usuarioLogueado != null)
+        {
+            caja.IdUsuario = usuarioLogueado.Id;
+        }
+
         cargando = true;
         StateHasChanged();
 
@@ -316,12 +497,12 @@
             var respuesta = await CajaService.Insert(crearCaja);
             if (!respuesta.Error && respuesta.Respuesta > 0)
             {
-                await JS.InvokeVoidAsync("alert", "✅Caja abierta exitosamente");
+                await JS.InvokeVoidAsync("alert", "✅ Caja abierta exitosamente");
                 Navigation.NavigateTo("/cajas");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"❌Error: {await respuesta.ObtenerError()}");
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
             }
         }
         else
@@ -329,12 +510,12 @@
             var respuesta = await CajaService.Update(Id, caja);
             if (!respuesta.Error)
             {
-                await JS.InvokeVoidAsync("alert", "✅Caja actualizada exitosamente");
+                await JS.InvokeVoidAsync("alert", "✅ Caja actualizada exitosamente");
                 Navigation.NavigateTo("/cajas");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", $"❌Error: {await respuesta.ObtenerError()}");
+                await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
             }
         }
 
@@ -350,13 +531,6 @@
             return;
         }
 
-        if (!resumenVentas.ValidacionMediosPago)
-        {
-            await JS.InvokeVoidAsync("alert", "❌ No puede cerrar la caja hasta que los totales de medios de pago coincidan");
-            return;
-        }
-
-        // Actualizar el importe de cierre en el resumen para calcular diferencia
         resumenVentas.ImporteCierre = caja.ImporteCierre;
 
         var mensajeConfirmacion = resumenVentas.Diferencia >= 0 ?
@@ -376,13 +550,13 @@
 
         if (!respuesta.Error)
         {
-            await JS.InvokeVoidAsync("alert", "Caja cerrada exitosamente");
+            await JS.InvokeVoidAsync("alert", "✅ Caja cerrada exitosamente");
             cajaCerrada = true;
             StateHasChanged();
         }
         else
         {
-            await JS.InvokeVoidAsync("alert", $"Error: {await respuesta.ObtenerError()}");
+            await JS.InvokeVoidAsync("alert", $"❌ Error: {await respuesta.ObtenerError()}");
         }
 
         cargando = false;

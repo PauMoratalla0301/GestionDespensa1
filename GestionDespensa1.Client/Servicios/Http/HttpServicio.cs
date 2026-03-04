@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
 namespace GestionDespensa1.Client.Servicios.Http
 {
@@ -9,6 +10,20 @@ namespace GestionDespensa1.Client.Servicios.Http
         public HttpServicio(HttpClient httpClient)
         {
             _httpClient = httpClient;
+        }
+
+        public void SetAuthorizationHeader(string? token)
+        {
+            if (_httpClient.DefaultRequestHeaders.Contains("Authorization"))
+            {
+                _httpClient.DefaultRequestHeaders.Remove("Authorization");
+            }
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                string authHeader = token.StartsWith("Bearer ") ? token : $"Bearer {token}";
+                _httpClient.DefaultRequestHeaders.Add("Authorization", authHeader);
+            }
         }
 
         public async Task<HttpRespuesta<T>> Get<T>(string url)
@@ -29,6 +44,30 @@ namespace GestionDespensa1.Client.Servicios.Http
             catch (Exception ex)
             {
                 return CrearRespuestaError($"Error de conexión: {ex.Message}");
+            }
+        }
+
+        public async Task<HttpRespuesta<T2>> Post<T1, T2>(string url, T1 enviar)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync(url, enviar);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var resultado = await response.Content.ReadFromJsonAsync<T2>();
+                    return new HttpRespuesta<T2>(resultado, false, response);
+                }
+
+                return new HttpRespuesta<T2>(default, true, response);
+            }
+            catch (Exception ex)
+            {
+                return new HttpRespuesta<T2>(default, true,
+                    new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError)
+                    {
+                        Content = new StringContent($"Error de conexión: {ex.Message}")
+                    });
             }
         }
 

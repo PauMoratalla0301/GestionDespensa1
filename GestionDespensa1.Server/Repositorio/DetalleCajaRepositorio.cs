@@ -13,20 +13,45 @@ namespace GestionDespensa1.Server.Repositorio
             _context = context;
         }
 
-        public async Task<List<DetalleCaja>> GetByCaja(int cajaId)
+        public async Task<List<DetalleCaja>> GetByCaja(int idCaja)
         {
             return await _context.DetallesCaja
                 .Include(d => d.Caja)
-                .Where(d => d.IdCaja == cajaId)
+                .Where(d => d.IdCaja == idCaja)
+                .OrderByDescending(d => d.Fecha)
                 .ToListAsync();
         }
 
-        public async Task<List<DetalleCaja>> GetByVenta(string idVenta)
+        public async Task<List<DetalleCaja>> GetByFecha(DateTime fecha)
         {
             return await _context.DetallesCaja
                 .Include(d => d.Caja)
-                .Where(d => d.IdVenta == idVenta)
+                .Where(d => d.Fecha.Date == fecha.Date)
+                .OrderByDescending(d => d.Fecha)
                 .ToListAsync();
+        }
+
+        public async Task<List<DetalleCaja>> GetByTipo(string tipo)
+        {
+            return await _context.DetallesCaja
+                .Include(d => d.Caja)
+                .Where(d => d.Tipo == tipo)
+                .OrderByDescending(d => d.Fecha)
+                .ToListAsync();
+        }
+
+        public async Task<decimal> GetTotalIngresosPorCaja(int idCaja)
+        {
+            return await _context.DetallesCaja
+                .Where(d => d.IdCaja == idCaja && d.Tipo == "INGRESO")
+                .SumAsync(d => d.Monto);
+        }
+
+        public async Task<decimal> GetTotalEgresosPorCaja(int idCaja)
+        {
+            return await _context.DetallesCaja
+                .Where(d => d.IdCaja == idCaja && d.Tipo == "EGRESO")
+                .SumAsync(d => d.Monto);
         }
 
         public async Task<List<DetalleCaja>> SelectWithRelations()
@@ -41,72 +66,6 @@ namespace GestionDespensa1.Server.Repositorio
             return await _context.DetallesCaja
                 .Include(d => d.Caja)
                 .FirstOrDefaultAsync(d => d.Id == id);
-        }
-
-        public async Task<bool> Existe(int id)
-        {
-            try
-            {
-                return await _context.DetallesCaja.AnyAsync(d => d.Id == id);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public async Task<int> Insert(DetalleCaja detalle)
-        {
-            try
-            {
-                _context.DetallesCaja.Add(detalle);
-                await _context.SaveChangesAsync();
-                return detalle.Id;
-            }
-            catch
-            {
-                return -1;
-            }
-        }
-
-        public async Task<bool> Update(int id, DetalleCaja detalle)
-        {
-            try
-            {
-                var detalleExistente = await _context.DetallesCaja.FindAsync(id);
-                if (detalleExistente == null)
-                    return false;
-
-                // Actualizar propiedades
-                detalleExistente.IdVenta = detalle.IdVenta;
-                detalleExistente.Monto = detalle.Monto;
-                detalleExistente.IdCaja = detalle.IdCaja;
-
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public async Task<bool> Delete(int id)
-        {
-            try
-            {
-                var detalle = await _context.DetallesCaja.FindAsync(id);
-                if (detalle == null)
-                    return false;
-
-                _context.DetallesCaja.Remove(detalle);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
         }
     }
 }

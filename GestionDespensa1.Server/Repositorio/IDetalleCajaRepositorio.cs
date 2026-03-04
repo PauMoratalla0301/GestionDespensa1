@@ -2,15 +2,14 @@
 
 namespace GestionDespensa1.Server.Repositorio
 {
-    public interface IDetalleCajaRepositorio
+    public interface IDetalleCajaRepositorio : IRepositorio<DetalleCaja>
     {
-        Task<List<DetalleCaja>> GetByCaja(int cajaId);
-        Task<List<DetalleCaja>> GetByVenta(string idVenta);
+        Task<List<DetalleCaja>> GetByCaja(int idCaja);
+        Task<List<DetalleCaja>> GetByFecha(DateTime fecha);
+        Task<List<DetalleCaja>> GetByTipo(string tipo);
+        Task<decimal> GetTotalIngresosPorCaja(int idCaja);
+        Task<decimal> GetTotalEgresosPorCaja(int idCaja);
         Task<List<DetalleCaja>> SelectWithRelations();
         Task<DetalleCaja?> SelectByIdWithRelations(int id);
-        Task<bool> Existe(int id);
-        Task<int> Insert(DetalleCaja detalle);
-        Task<bool> Update(int id, DetalleCaja detalle);
-        Task<bool> Delete(int id);
     }
 }

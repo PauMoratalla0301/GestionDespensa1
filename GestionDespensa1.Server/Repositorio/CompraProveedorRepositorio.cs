@@ -25,11 +25,14 @@ namespace GestionDespensa1.Server.Repositorio
 
         public async Task<List<CompraProveedor>> GetByFecha(string fecha)
         {
+            if (!DateTime.TryParse(fecha, out var fechaCompra))
+                return new List<CompraProveedor>();
+
             return await _context.ComprasProveedor
                 .Include(c => c.Proveedor)
                 .Include(c => c.DetallesCompra)
                     .ThenInclude(d => d.Producto)
-                .Where(c => c.FechaCompra == fecha)
+                .Where(c => c.FechaCompra.Date == fechaCompra.Date)
                 .ToListAsync();
         }
 

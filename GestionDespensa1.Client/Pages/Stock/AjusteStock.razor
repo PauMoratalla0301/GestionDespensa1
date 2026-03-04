@@ -1,0 +1,269 @@
+﻿@page "/stock/ajuste"
+@using GestionDespensa1.Client.Servicios.Auth
+@using GestionDespensa1.Client.Servicios.Entidades
+@using GestionDespensa1.Shared.DTO
+@inject IProductoService ProductoService
+@inject IMovimientoStockService MovimientoStockService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Ajuste de Stock - Gestión Despensa</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-balance-scale text-warning me-2"></i>
+            Ajuste Manual de Stock
+        </h2>
+        <button class="btn btn-outline-secondary" @onclick="Volver">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+        </button>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Realizar Ajuste</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="ajuste" OnValidSubmit="GuardarAjuste">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="alert alert-danger" />
+
+                        <!-- Selección de producto -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Producto *</label>
+                            <InputSelect class="form-control" @bind-Value="ajuste.IdProducto">
+                                <option value="0">-- Seleccione un producto --</option>
+                                @foreach (var producto in productos)
+                                {
+                                    <option value="@producto.Id">
+                                        @producto.Descripcion (Stock actual: @producto.StockActual)
+                                    </option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => ajuste.IdProducto)" class="text-danger" />
+                        </div>
+
+                        <!-- Stock actual (solo lectura) -->
+                        @if (productoSeleccionado != null)
+                        {
+                            <div class="alert alert-info mb-3">
+                                <strong>Stock actual:</strong> @productoSeleccionado.StockActual unidades
+                            </div>
+                        }
+
+                        <!-- Tipo de ajuste -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tipo de Ajuste *</label>
+                            <InputSelect class="form-control" @bind-Value="ajuste.Tipo" @onchange="OnTipoCambiado">
+                                <option value="">-- Seleccione --</option>
+                                <option value="AJUSTE_SUMA">Sumar stock</option>
+                                <option value="AJUSTE_RESTA">Restar stock</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => ajuste.Tipo)" class="text-danger" />
+                        </div>
+
+                        <!-- Cantidad -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Cantidad *</label>
+                            <InputNumber class="form-control" @bind-Value="ajuste.Cantidad" min="1" />
+                            <ValidationMessage For="@(() => ajuste.Cantidad)" class="text-danger" />
+                        </div>
+
+                        <!-- Observaciones -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Motivo del Ajuste *</label>
+                            <InputTextArea class="form-control" @bind-Value="ajuste.Observaciones" rows="3"
+                                           placeholder="Ej: Merma, rotura, error de inventario, etc." />
+                            <ValidationMessage For="@(() => ajuste.Observaciones)" class="text-danger" />
+                        </div>
+
+                        <!-- Nuevo stock calculado -->
+                        @if (productoSeleccionado != null && ajuste.Cantidad > 0 && !string.IsNullOrEmpty(ajuste.Tipo))
+                        {
+                            var nuevoStock = ajuste.Tipo == "AJUSTE_SUMA"
+                            ? productoSeleccionado.StockActual + ajuste.Cantidad
+                            : productoSeleccionado.StockActual - ajuste.Cantidad;
+
+                            <div class="alert @(nuevoStock >= 0 ? "alert-success" : "alert-danger")">
+                                <strong>Stock resultante:</strong> @nuevoStock unidades
+                                @if (nuevoStock < 0)
+                                {
+                                    <br />
+                                    <span class="text-danger">¡El stock no puede ser negativo!</span>
+                                }
+                            </div>
+                        }
+
+                        <hr />
+                        <button type="submit" class="btn btn-warning" disabled="@cargando">
+                            <i class="fas @(cargando ? "fa-spinner fa-spin" : "fa-save") me-2"></i>
+                            @(cargando ? "Guardando..." : "Realizar Ajuste")
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+
+            <!-- Historial de ajustes recientes -->
+            @if (ultimosAjustes != null && ultimosAjustes.Any())
+            {
+                <div class="card shadow mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Últimos Ajustes</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Producto</th>
+                                        <th>Tipo</th>
+                                        <th>Cantidad</th>
+                                        <th>Stock Anterior</th>
+                                        <th>Stock Nuevo</th>
+                                        <th>Motivo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var mov in ultimosAjustes)
+                                    {
+                                        <tr>
+                                            <td>@mov.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@mov.NombreProducto</td>
+                                            <td>
+                                                <span class="badge @(mov.Cantidad > 0 ? "bg-success" : "bg-danger")">
+                                                    @mov.Tipo
+                                                </span>
+                                            </td>
+                                            <td class="fw-bold @(mov.Cantidad > 0 ? "text-success" : "text-danger")">
+                                                @(mov.Cantidad > 0 ? "+" : "")@mov.Cantidad
+                                            </td>
+                                            <td>@mov.StockAnterior</td>
+                                            <td class="fw-bold">@mov.StockNuevo</td>
+                                            <td><small>@mov.Observaciones</small></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ProductoDTO> productos = new();
+    private ProductoDTO? productoSeleccionado;
+    private List<MovimientoStockDTO> ultimosAjustes = new();
+    private bool cargando = false;
+
+    private CrearMovimientoStockDTO ajuste = new()
+    {
+        Tipo = "",
+        Cantidad = 1,
+        Fecha = DateTime.Now
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProductos();
+        await CargarUltimosAjustes();
+    }
+
+    private async Task CargarProductos()
+    {
+        var respuesta = await ProductoService.Get();
+        if (!respuesta.Error)
+        {
+            productos = respuesta.Respuesta ?? new();
+        }
+    }
+
+    private async Task CargarUltimosAjustes()
+    {
+        var respuesta = await MovimientoStockService.GetByTipo("AJUSTE");
+        if (!respuesta.Error)
+        {
+            ultimosAjustes = respuesta.Respuesta?.Take(5).ToList() ?? new();
+        }
+    }
+
+    private void OnTipoCambiado(ChangeEventArgs e)
+    {
+        ajuste.Tipo = e.Value?.ToString() ?? "";
+        StateHasChanged();
+    }
+
+    private async Task GuardarAjuste()
+    {
+        // Validar producto seleccionado
+        productoSeleccionado = productos.FirstOrDefault(p => p.Id == ajuste.IdProducto);
+        if (productoSeleccionado == null)
+        {
+            await JS.InvokeVoidAsync("alert", "Seleccione un producto válido");
+            return;
+        }
+
+        // Validar stock suficiente si es resta
+        if (ajuste.Tipo == "AJUSTE_RESTA" && productoSeleccionado.StockActual < ajuste.Cantidad)
+        {
+            await JS.InvokeVoidAsync("alert",
+                $"Stock insuficiente. Actual: {productoSeleccionado.StockActual}");
+            return;
+        }
+
+        cargando = true;
+        StateHasChanged();
+
+        // Preparar el DTO
+        var ajusteDTO = new CrearMovimientoStockDTO
+        {
+            IdProducto = ajuste.IdProducto,
+            Tipo = ajuste.Tipo, // Se convertirá a "AJUSTE" en el backend
+            Cantidad = ajuste.Cantidad,
+            Fecha = DateTime.Now,
+            Observaciones = ajuste.Observaciones,
+            StockAnterior = productoSeleccionado.StockActual,
+            StockNuevo = ajuste.Tipo == "AJUSTE_SUMA"
+                ? productoSeleccionado.StockActual + ajuste.Cantidad
+                : productoSeleccionado.StockActual - ajuste.Cantidad
+        };
+
+        var respuesta = await MovimientoStockService.AjusteManual(ajusteDTO);
+        if (!respuesta.Error && respuesta.Respuesta > 0)
+        {
+            await JS.InvokeVoidAsync("alert", "✅ Ajuste realizado correctamente");
+
+            // Limpiar formulario
+            ajuste = new CrearMovimientoStockDTO
+            {
+                Tipo = "",
+                Cantidad = 1,
+                Fecha = DateTime.Now
+            };
+            productoSeleccionado = null;
+
+            // Recargar datos
+            await CargarProductos();
+            await CargarUltimosAjustes();
+        }
+        else
+        {
+            var error = await respuesta.ObtenerError();
+            await JS.InvokeVoidAsync("alert", $"❌ Error: {error}");
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private void Volver()
+    {
+        Navigation.NavigateTo("/stock/movimientos");
+    }
+}

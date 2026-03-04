@@ -9,16 +9,28 @@ using GestionDespensa1.Shared.DTO;
 namespace GestionDespensa1.Server.Controllers
 {
     [ApiController]
-    [Route("api/ComprasProveedor")]
-    public class ComprasProveedorControllers : ControllerBase
+    [Route("api/[controller]")]
+    public class ComprasProveedorController : ControllerBase
     {
         private readonly ICompraProveedorRepositorio _repositorio;
+        private readonly IProductoRepositorio _productoRepositorio;
+        private readonly IMovimientoStockRepositorio _movimientoStockRepositorio;
+        private readonly IPagoProveedorRepositorio _pagoProveedorRepositorio;
         private readonly IMapper _mapper;
         private readonly Context _context;
 
-        public ComprasProveedorControllers(ICompraProveedorRepositorio repositorio, IMapper mapper, Context context)
+        public ComprasProveedorController(
+            ICompraProveedorRepositorio repositorio,
+            IProductoRepositorio productoRepositorio,
+            IMovimientoStockRepositorio movimientoStockRepositorio,
+            IPagoProveedorRepositorio pagoProveedorRepositorio,
+            IMapper mapper,
+            Context context)
         {
             _repositorio = repositorio;
+            _productoRepositorio = productoRepositorio;
+            _movimientoStockRepositorio = movimientoStockRepositorio;
+            _pagoProveedorRepositorio = pagoProveedorRepositorio;
             _mapper = mapper;
             _context = context;
         }
@@ -28,84 +40,46 @@ namespace GestionDespensa1.Server.Controllers
         {
             try
             {
-                Console.WriteLine("🔍 Iniciando GET /api/ComprasProveedor");
+                var compras = await _context.ComprasProveedor
+                    .Include(c => c.Proveedor)
+                    .Include(c => c.DetallesCompra)
+                        .ThenInclude(d => d.Producto)
+                    .OrderByDescending(c => c.FechaCompra)
+                    .ToListAsync();
 
-                var compras = await _repositorio.SelectWithRelations();
-                Console.WriteLine($"✅ Compras encontradas: {compras?.Count ?? 0}");
+                var comprasDTO = new List<CompraProveedorDTO>();
 
-                if (compras == null || !compras.Any())
+                foreach (var c in compras)
                 {
-                    Console.WriteLine("ℹ️  No hay compras, retornando lista vacía");
-                    return new List<CompraProveedorDTO>();
-                }
+                    var totalPagado = await _pagoProveedorRepositorio.GetTotalPagadoPorCompra(c.Id);
 
-                var comprasDTO = _mapper.Map<List<CompraProveedorDTO>>(compras);
-                Console.WriteLine($"✅ Mapeo exitoso. DTOs: {comprasDTO.Count}");
+                    comprasDTO.Add(new CompraProveedorDTO
+                    {
+                        Id = c.Id,
+                        IdProveedor = c.IdProveedor,
+                        NombreProveedor = c.Proveedor?.Nombre ?? "",
+                        FechaCompra = c.FechaCompra,
+                        Total = c.DetallesCompra?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0,
+                        PagadoTotal = totalPagado,
+                        Estado = c.Estado,
+                        MetodoPago = c.MetodoPago ?? "EFECTIVO",
+                        Observaciones = c.Observaciones,
+                        DetallesCompra = c.DetallesCompra?.Select(d => new DetalleCompraProveedorDTO
+                        {
+                            Id = d.Id,
+                            IdCompra = d.IdCompra,
+                            IdProducto = d.IdProducto,
+                            DescripcionProducto = d.Producto?.Descripcion ?? "",
+                            Cantidad = d.Cantidad,
+                            PrecioUnitario = d.PrecioUnitario
+                        }).ToList() ?? new()
+                    });
+                }
 
                 return Ok(comprasDTO);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en GET ComprasProveedor: {ex.Message}");
-                Console.WriteLine($"📋 Stack: {ex.StackTrace}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"🔍 Inner: {ex.InnerException.Message}");
-                }
-                return StatusCode(500, $"Error al cargar compras: {ex.Message}");
-            }
-        }
-
-        [HttpGet("test")]
-        public ActionResult<string> Test()
-        {
-            return "✅ Controller de ComprasProveedor funcionando correctamente";
-        }
-
-        [HttpGet("count")]
-        public async Task<ActionResult<int>> GetCount()
-        {
-            try
-            {
-                var count = await _context.ComprasProveedor.CountAsync();
-                Console.WriteLine($"📊 Total compras en BD: {count}");
-                return count;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error en count: {ex.Message}");
-                return BadRequest($"Error count: {ex.Message}");
-            }
-        }
-
-        [HttpGet("simple")]
-        public async Task<ActionResult<List<CompraProveedorDTO>>> GetSimple()
-        {
-            try
-            {
-                var compras = await _context.ComprasProveedor
-                    .Include(c => c.Proveedor)
-                    .Select(c => new CompraProveedorDTO
-                    {
-                        Id = c.Id,
-                        IdProveedor = c.IdProveedor,
-                        FechaCompra = c.FechaCompra,
-                        Observaciones = c.Observaciones,
-                        Proveedor = c.Proveedor != null ? new ProveedorDTO
-                        {
-                            Id = c.Proveedor.Id,
-                            Nombre = c.Proveedor.Nombre,
-                        } : null,
-                        DetallesCompra = new List<DetalleCompraProveedorDTO>() 
-                    })
-                    .ToListAsync();
-
-                Console.WriteLine($"✅ GetSimple exitoso. Compras: {compras.Count}");
-                return Ok(compras);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error en GetSimple: {ex.Message}");
                 return StatusCode(500, $"Error: {ex.Message}");
             }
         }
@@ -115,137 +89,223 @@ namespace GestionDespensa1.Server.Controllers
         {
             try
             {
-                Console.WriteLine($"🔍 Buscando compra ID: {id}");
+                var compra = await _context.ComprasProveedor
+                    .Include(c => c.Proveedor)
+                    .Include(c => c.DetallesCompra)
+                        .ThenInclude(d => d.Producto)
+                    .FirstOrDefaultAsync(c => c.Id == id);
 
-                var compra = await _repositorio.SelectByIdWithRelations(id);
                 if (compra == null)
-                {
-                    Console.WriteLine($"❌ Compra {id} no encontrada");
                     return NotFound();
-                }
 
-                var compraDTO = _mapper.Map<CompraProveedorDTO>(compra);
-                Console.WriteLine($"✅ Compra encontrada: ID {compraDTO.Id}");
+                var totalPagado = await _pagoProveedorRepositorio.GetTotalPagadoPorCompra(compra.Id);
+
+                var compraDTO = new CompraProveedorDTO
+                {
+                    Id = compra.Id,
+                    IdProveedor = compra.IdProveedor,
+                    NombreProveedor = compra.Proveedor?.Nombre ?? "",
+                    FechaCompra = compra.FechaCompra,
+                    Total = compra.DetallesCompra?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0,
+                    PagadoTotal = totalPagado,
+                    Estado = compra.Estado,
+                    MetodoPago = compra.MetodoPago ?? "EFECTIVO",
+                    Observaciones = compra.Observaciones,
+                    DetallesCompra = compra.DetallesCompra?.Select(d => new DetalleCompraProveedorDTO
+                    {
+                        Id = d.Id,
+                        IdCompra = d.IdCompra,
+                        IdProducto = d.IdProducto,
+                        DescripcionProducto = d.Producto?.Descripcion ?? "",
+                        Cantidad = d.Cantidad,
+                        PrecioUnitario = d.PrecioUnitario
+                    }).ToList() ?? new()
+                };
+
                 return Ok(compraDTO);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en GET {id}: {ex.Message}");
                 return BadRequest($"Error: {ex.Message}");
             }
         }
 
-        [HttpGet("GetByProveedor/{proveedorId:int}")]
-        public async Task<ActionResult<List<CompraProveedorDTO>>> GetByProveedor(int proveedorId)
+        [HttpGet("GetByProveedor/{idProveedor:int}")]
+        public async Task<ActionResult<List<CompraProveedorDTO>>> GetByProveedor(int idProveedor)
         {
             try
             {
-                Console.WriteLine($"🔍 Buscando compras por proveedor: {proveedorId}");
+                var compras = await _context.ComprasProveedor
+                    .Include(c => c.Proveedor)
+                    .Include(c => c.DetallesCompra)
+                        .ThenInclude(d => d.Producto)
+                    .Where(c => c.IdProveedor == idProveedor)
+                    .OrderByDescending(c => c.FechaCompra)
+                    .ToListAsync();
 
-                var compras = await _repositorio.GetByProveedor(proveedorId);
-                var comprasDTO = _mapper.Map<List<CompraProveedorDTO>>(compras);
+                var comprasDTO = new List<CompraProveedorDTO>();
 
-                Console.WriteLine($"✅ Compras encontradas para proveedor {proveedorId}: {comprasDTO.Count}");
+                foreach (var c in compras)
+                {
+                    var totalPagado = await _pagoProveedorRepositorio.GetTotalPagadoPorCompra(c.Id);
+
+                    comprasDTO.Add(new CompraProveedorDTO
+                    {
+                        Id = c.Id,
+                        IdProveedor = c.IdProveedor,
+                        NombreProveedor = c.Proveedor?.Nombre ?? "",
+                        FechaCompra = c.FechaCompra,
+                        Total = c.DetallesCompra?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0,
+                        PagadoTotal = totalPagado,
+                        Estado = c.Estado,
+                        MetodoPago = c.MetodoPago ?? "EFECTIVO",
+                        Observaciones = c.Observaciones,
+                        DetallesCompra = c.DetallesCompra?.Select(d => new DetalleCompraProveedorDTO
+                        {
+                            Id = d.Id,
+                            IdCompra = d.IdCompra,
+                            IdProducto = d.IdProducto,
+                            DescripcionProducto = d.Producto?.Descripcion ?? "",
+                            Cantidad = d.Cantidad,
+                            PrecioUnitario = d.PrecioUnitario
+                        }).ToList() ?? new()
+                    });
+                }
+
                 return Ok(comprasDTO);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en GetByProveedor {proveedorId}: {ex.Message}");
-                return BadRequest($"Error: {ex.Message}");
-            }
-        }
-
-        [HttpGet("GetByFecha/{fecha}")]
-        public async Task<ActionResult<List<CompraProveedorDTO>>> GetByFecha(string fecha)
-        {
-            try
-            {
-                Console.WriteLine($"🔍 Buscando compras por fecha: {fecha}");
-
-                var compras = await _repositorio.GetByFecha(fecha);
-                var comprasDTO = _mapper.Map<List<CompraProveedorDTO>>(compras);
-
-                Console.WriteLine($"✅ Compras encontradas para fecha {fecha}: {comprasDTO.Count}");
-                return Ok(comprasDTO);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error en GetByFecha {fecha}: {ex.Message}");
-                return BadRequest($"Error: {ex.Message}");
-            }
-        }
-
-        [HttpGet("existe/{id:int}")]
-        public async Task<ActionResult<bool>> Existe(int id)
-        {
-            try
-            {
-                var existe = await _repositorio.Existe(id);
-                Console.WriteLine($"✅ Existe compra {id}: {existe}");
-                return existe;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error en Existe {id}: {ex.Message}");
                 return BadRequest($"Error: {ex.Message}");
             }
         }
 
         [HttpPost]
-        public async Task<ActionResult<int>> Post(CrearCompraProveedorDTO crearCompraProveedorDTO)
+        public async Task<ActionResult<int>> Post(CrearCompraProveedorDTO crearCompraDTO)
         {
             try
             {
-                Console.WriteLine($"📝 Intentando crear compra para proveedor: {crearCompraProveedorDTO.IdProveedor}");
+                // Validar proveedor
+                var proveedor = await _context.Proveedores.FindAsync(crearCompraDTO.IdProveedor);
+                if (proveedor == null)
+                    return BadRequest("Proveedor no encontrado");
 
-                var compra = _mapper.Map<CompraProveedor>(crearCompraProveedorDTO);
-                var idCreado = await _repositorio.Insert(compra);
+                // Buscar caja abierta del día
+                var cajaHoy = await _context.Cajas
+                    .FirstOrDefaultAsync(c => c.Fecha.Date == DateTime.Today.Date && c.Estado == "Abierta");
 
-                if (idCreado == -1)
+                // Crear compra
+                var compra = new CompraProveedor
                 {
-                    Console.WriteLine($"❌ Error al crear compra");
-                    return BadRequest("No se pudo crear la compra de proveedor");
+                    IdProveedor = crearCompraDTO.IdProveedor,
+                    FechaCompra = crearCompraDTO.FechaCompra,
+                    Estado = crearCompraDTO.Estado,
+                    MetodoPago = crearCompraDTO.MetodoPago,
+                    Observaciones = crearCompraDTO.Observaciones
+                };
+
+                _context.ComprasProveedor.Add(compra);
+                await _context.SaveChangesAsync();
+
+                decimal totalCompra = 0;
+
+                // Procesar detalles y actualizar stock
+                foreach (var detalle in crearCompraDTO.DetallesCompra)
+                {
+                    // Validar producto
+                    var producto = await _context.Productos.FindAsync(detalle.IdProducto);
+                    if (producto == null)
+                        return BadRequest($"Producto ID {detalle.IdProducto} no encontrado");
+
+                    // Insertar detalle
+                    var detalleCompra = new DetalleCompraProveedor
+                    {
+                        IdCompra = compra.Id,
+                        IdProducto = detalle.IdProducto,
+                        Cantidad = detalle.Cantidad,
+                        PrecioUnitario = detalle.PrecioUnitario
+                    };
+                    _context.DetallesCompraProveedor.Add(detalleCompra);
+
+                    totalCompra += detalle.Cantidad * detalle.PrecioUnitario;
+
+                    int stockAnterior = producto.StockActual;
+                    producto.StockActual += detalle.Cantidad;
+
+                    // Registrar movimiento de stock
+                    var movimiento = new MovimientoStock
+                    {
+                        IdProducto = detalle.IdProducto,
+                        Tipo = "COMPRA",
+                        Cantidad = detalle.Cantidad,
+                        Fecha = DateTime.Now,
+                        Referencia = $"Compra #{compra.Id}",
+                        StockAnterior = stockAnterior,
+                        StockNuevo = producto.StockActual
+                    };
+                    _context.MovimientosStock.Add(movimiento);
                 }
 
-                Console.WriteLine($"✅ Compra creada con ID: {idCreado}");
-                return idCreado;
+                // Actualizar total de la compra
+                compra.Total = totalCompra;
+
+                // Si la compra está pagada, registrar pago automático
+                if (crearCompraDTO.Estado == "PAGADA")
+                {
+                    var pago = new PagoProveedor
+                    {
+                        IdCompra = compra.Id,
+                        Fecha = DateTime.Now,
+                        Monto = totalCompra,
+                        MedioPago = crearCompraDTO.MetodoPago ?? "EFECTIVO",
+                        Observaciones = "Pago automático al crear compra"
+                    };
+                    _context.PagosProveedor.Add(pago);
+
+                    // Registrar egreso en caja
+                    if (cajaHoy != null)
+                    {
+                        var detalleCaja = new DetalleCaja
+                        {
+                            IdCaja = cajaHoy.Id,
+                            Tipo = "EGRESO",
+                            Concepto = $"Compra a {proveedor.Nombre}",
+                            Monto = totalCompra,
+                            Fecha = DateTime.Now,
+                            Referencia = $"Compra #{compra.Id}"
+                        };
+                        _context.DetallesCaja.Add(detalleCaja);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return Ok(compra.Id);
             }
-            catch (Exception err)
+            catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en POST CompraProveedor: {err.Message}");
-                return BadRequest(err.Message);
+                return BadRequest($"Error: {ex.Message}");
             }
         }
 
         [HttpPut("{id:int}")]
-        public async Task<ActionResult> Put(int id, CompraProveedorDTO compraProveedorDTO)
+        public async Task<ActionResult> Put(int id, CompraProveedorDTO compraDTO)
         {
             try
             {
-                Console.WriteLine($"✏️ Intentando actualizar compra {id}");
+                var compra = await _context.ComprasProveedor.FindAsync(id);
+                if (compra == null)
+                    return NotFound();
 
-                if (id != compraProveedorDTO.Id)
-                {
-                    Console.WriteLine($"❌ IDs no coinciden: {id} vs {compraProveedorDTO.Id}");
-                    return BadRequest("Datos Incorrectos");
-                }
+                compra.Estado = compraDTO.Estado;
+                compra.MetodoPago = compraDTO.MetodoPago;
+                compra.Observaciones = compraDTO.Observaciones;
 
-                var compra = _mapper.Map<CompraProveedor>(compraProveedorDTO);
-                var resultado = await _repositorio.Update(id, compra);
-
-                if (!resultado)
-                {
-                    Console.WriteLine($"❌ No se pudo actualizar compra {id}");
-                    return BadRequest("No se pudo actualizar la compra de proveedor");
-                }
-
-                Console.WriteLine($"✅ Compra {id} actualizada correctamente");
+                await _context.SaveChangesAsync();
                 return Ok();
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en PUT CompraProveedor {id}: {e.Message}");
-                return BadRequest(e.Message);
+                return BadRequest($"Error: {ex.Message}");
             }
         }
 
@@ -254,21 +314,25 @@ namespace GestionDespensa1.Server.Controllers
         {
             try
             {
-                Console.WriteLine($"🗑️ Intentando eliminar compra {id}");
+                var compra = await _context.ComprasProveedor
+                    .Include(c => c.DetallesCompra)
+                    .FirstOrDefaultAsync(c => c.Id == id);
 
-                var resp = await _repositorio.Delete(id);
-                if (!resp)
-                {
-                    Console.WriteLine($"❌ No se pudo borrar compra {id}");
-                    return BadRequest("La compra de proveedor no se pudo borrar");
-                }
+                if (compra == null)
+                    return NotFound();
 
-                Console.WriteLine($"✅ Compra {id} eliminada correctamente");
+                // Eliminar pagos asociados
+                var pagos = await _context.PagosProveedor.Where(p => p.IdCompra == id).ToListAsync();
+                _context.PagosProveedor.RemoveRange(pagos);
+
+                _context.DetallesCompraProveedor.RemoveRange(compra.DetallesCompra);
+                _context.ComprasProveedor.Remove(compra);
+                await _context.SaveChangesAsync();
+
                 return Ok();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error en DELETE CompraProveedor {id}: {ex.Message}");
                 return BadRequest($"Error: {ex.Message}");
             }
         }

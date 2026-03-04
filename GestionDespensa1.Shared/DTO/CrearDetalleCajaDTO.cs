@@ -9,15 +9,24 @@ namespace GestionDespensa1.Shared.DTO
 {
     public class CrearDetalleCajaDTO
     {
-        [Required(ErrorMessage = "El ID de venta es obligatorio.")]
-        [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string IdVenta { get; set; }
-
-        [Required(ErrorMessage = "El monto es obligatorio.")]
-        [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string Monto { get; set; }
-
-        [Required(ErrorMessage = "El ID de caja es obligatorio.")]
+        [Required]
         public int IdCaja { get; set; }
+
+        [Required]
+        [MaxLength(20)]
+        public string Tipo { get; set; } = "INGRESO";
+
+        [Required]
+        [MaxLength(200)]
+        public string Concepto { get; set; } = string.Empty;
+
+        [Required]
+        [Range(0.01, double.MaxValue)]
+        public decimal Monto { get; set; }
+
+        public DateTime Fecha { get; set; } = DateTime.Now;
+
+        [MaxLength(500)]
+        public string? Referencia { get; set; }
     }
 }

@@ -13,10 +13,22 @@ namespace GestionDespensa1.Shared.DTO
         public int IdProveedor { get; set; }
 
         [Required(ErrorMessage = "La fecha de compra es obligatoria.")]
-        [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string FechaCompra { get; set; } = string.Empty;
+        public DateTime FechaCompra { get; set; }
 
-        [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string Observaciones { get; set; } = string.Empty;
+        [Required(ErrorMessage = "El estado es obligatorio.")]
+        [MaxLength(20, ErrorMessage = "Máximo número de caracteres {1}.")]
+        public string Estado { get; set; } = "PENDIENTE";
+
+        [MaxLength(50, ErrorMessage = "Máximo número de caracteres {1}.")]
+        public string MetodoPago { get; set; } = "EFECTIVO";
+
+        [MaxLength(500, ErrorMessage = "Máximo número de caracteres {1}.")]
+        public string? Observaciones { get; set; }
+
+        // 👇 NUEVO: ID del usuario que registra la compra
+        [Required(ErrorMessage = "El ID de usuario es obligatorio.")]
+        public int IdUsuario { get; set; }
+
+        public List<DetalleCompraProveedorDTO> DetallesCompra { get; set; } = new List<DetalleCompraProveedorDTO>();
     }
 }

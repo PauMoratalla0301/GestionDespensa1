@@ -1,12 +1,23 @@
-﻿@inherits LayoutComponentBase
+﻿@using GestionDespensa1.Client.Servicios.Auth
+g GestionDespensa1.Client.Servicios.Entidades
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inherits LayoutComponentBase
+
 <div class="page">
-    <div class="sidebar">
+    <div class="sidebar" style="background: #27ae60;">
         <NavMenu />
     </div>
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <AuthorizeView>
+                <Authorized>
+                    <button class="btn btn-link" @onclick="CerrarSesion" style="color: #27ae60;">
+                        <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+                    </button>
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
@@ -14,3 +25,11 @@
         </article>
     </main>
 </div>
+
+@code {
+    private async Task CerrarSesion()
+    {
+        await AuthService.Logout();
+        Navigation.NavigateTo("/login", true);
+    }
+}

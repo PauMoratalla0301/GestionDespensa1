@@ -118,5 +118,10 @@ namespace GestionDespensa1.Server.Repositorio
                 return false;
             }
         }
+
+        Task IProductoRepositorio.SelectById(int idProducto)
+        {
+            return SelectById(idProducto);
+        }
     }
 }

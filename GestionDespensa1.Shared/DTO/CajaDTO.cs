@@ -12,8 +12,9 @@ namespace GestionDespensa1.Shared.DTO
         public int Id { get; set; }
 
         [Required(ErrorMessage = "El ID de usuario es obligatorio.")]
-        [MaxLength(45, ErrorMessage = "Máximo número de caracteres {1}.")]
-        public string IdUsuario { get; set; }
+        public int IdUsuario { get; set; }  // 👈 CAMBIADO DE STRING A INT
+
+        public string? NombreUsuario { get; set; }  // Para mostrar el nombre
 
         [Required(ErrorMessage = "La fecha es obligatoria.")]
         public DateTime Fecha { get; set; }
@@ -21,7 +22,6 @@ namespace GestionDespensa1.Shared.DTO
         [Required(ErrorMessage = "El importe de inicio es obligatorio.")]
         public decimal ImporteInicio { get; set; }
 
-        // NUEVOS CAMPOS
         public decimal? ImporteCierre { get; set; }
 
         [Required]

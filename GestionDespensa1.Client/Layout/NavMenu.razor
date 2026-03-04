@@ -1,4 +1,11 @@
-﻿<div class="top-row ps-3 navbar navbar-dark" style="background: #27ae60;">
+﻿@using GestionDespensa1.Client.Servicios.Auth
+@using GestionDespensa1.Client.Servicios.Entidades
+@using GestionDespensa1.Shared.DTO
+@inject IAuthService AuthService
+@inject INotificacionesService NotificacionesService
+@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark" style="background: #27ae60;">
     <div class="container-fluid">
         <a class="navbar-brand" href="" style="color: white !important;">
             <i class="fas fa-store me-2"></i>Gestión Despensa
@@ -11,56 +18,338 @@
 
 <div class="@NavMenuCssClass" style="background: #27ae60; min-height: 100vh;">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="cajas/nuevo" style="color: white;">
-                <i class="fas fa-plus-circle me-2"></i> Nueva Caja
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="cajas" style="color: white;">
-                <i class="fas fa-list me-2"></i> Registro de Cajas
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="ventas/nuevo" style="color: white;">
-                <i class="fas fa-cash-register me-2"></i> Nueva Venta
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="ventas" style="color: white;">
-                <i class="fas fa-list me-2"></i> Lista de Ventas
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="productos" style="color: white;">
-                <i class="fas fa-tags me-2"></i> Productos
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="categorias" style="color: white;">
-                <i class="fas fa-folder me-2"></i> Categorías
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="clientes" style="color: white;">
-                <i class="fas fa-users me-2"></i> Clientes
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="proveedores" style="color: white;">
-                <i class="fas fa-truck me-2"></i> Proveedores
-            </NavLink>
-        </div>
+        @if (usuarioLogueado != null)
+        {
+            <!-- Información del usuario -->
+            <div class="nav-item px-3 mb-3">
+                <div class="d-flex align-items-center p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                    <i class="fas fa-user-circle fs-4 me-2" style="color: white;"></i>
+                    <div style="color: white;">
+                        <div class="fw-bold">@usuarioLogueado.Nombre</div>
+                        <small>@usuarioLogueado.Rol</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOTIFICACIONES GENERALES (CLICABLES) -->
+            @if (notificaciones.HayNotificaciones)
+            {
+                <div class="nav-item px-3 mb-3">
+                    <div class="p-2" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        <div class="d-flex align-items-center text-white mb-2">
+                            <i class="fas fa-bell me-2"></i>
+                            <span class="fw-bold">Notificaciones</span>
+                        </div>
+                        <div class="small">
+                            @if (notificaciones.StockBajo > 0)
+                            {
+                                <div class="d-flex justify-content-between align-items-center mb-1 p-1 rounded notificacion-item"
+                                     @onclick="IrAProductos">
+                                    <span><i class="fas fa-box me-2"></i>Stock bajo</span>
+                                    <span class="badge bg-danger">@notificaciones.StockBajo</span>
+                                </div>
+                            }
+                            @if (notificaciones.ClientesDeudores > 0)
+                            {
+                                <div class="d-flex justify-content-between align-items-center mb-1 p-1 rounded notificacion-item"
+                                     @onclick="IrAClientes">
+                                    <span><i class="fas fa-users me-2"></i>Clientes deudores</span>
+                                    <span class="badge bg-warning">@notificaciones.ClientesDeudores</span>
+                                </div>
+                            }
+                            @if (notificaciones.ComprasPendientes > 0)
+                            {
+                                <div class="d-flex justify-content-between align-items-center mb-1 p-1 rounded notificacion-item"
+                                     @onclick="IrACompras">
+                                    <span><i class="fas fa-shopping-cart me-2"></i>Compras pendientes</span>
+                                    <span class="badge bg-warning">@notificaciones.ComprasPendientes</span>
+                                </div>
+                            }
+                            @if (notificaciones.VentasPendientes > 0)
+                            {
+                                <div class="d-flex justify-content-between align-items-center p-1 rounded notificacion-item"
+                                     @onclick="IrAVentas">
+                                    <span><i class="fas fa-cash-register me-2"></i>Ventas pendientes</span>
+                                    <span class="badge bg-warning">@notificaciones.VentasPendientes</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- SECCIÓN: PANEL DE CONTROL -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/" style="color: white;" Match="NavLinkMatch.All">
+                    <i class="fas fa-tachometer-alt me-2"></i> Panel de Control
+                </NavLink>
+            </div>
+
+            <!-- SECCIÓN: CAJA -->
+            <div class="nav-item px-3 mt-2">
+                <small style="color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight: bold;">Caja</small>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="cajas/nuevo" style="color: white;">
+                    <i class="fas fa-plus-circle me-2"></i> Nueva Caja
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="cajas" style="color: white;">
+                    <i class="fas fa-list me-2"></i> Registro de Cajas
+                </NavLink>
+            </div>
+
+            <!-- SECCIÓN: VENTAS -->
+            <div class="nav-item px-3 mt-3">
+                <small style="color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight: bold;">Ventas</small>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="ventas/nuevo" style="color: white;">
+                    <i class="fas fa-cash-register me-2"></i> Nueva Venta
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="ventas" style="color: white;">
+                    <i class="fas fa-list me-2"></i> Lista de Ventas
+                    @if (notificaciones.VentasPendientes > 0)
+                    {
+                        <span class="badge bg-warning ms-2" style="font-size: 0.7rem;">@notificaciones.VentasPendientes</span>
+                    }
+                </NavLink>
+            </div>
+
+            <!-- SECCIÓN: COMPRAS -->
+            <div class="nav-item px-3 mt-3">
+                <small style="color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight: bold;">Compras</small>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="compras/nueva" style="color: white;">
+                    <i class="fas fa-cart-plus me-2"></i> Nueva Compra
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="compras" style="color: white;">
+                    <i class="fas fa-list me-2"></i> Lista de Compras
+                    @if (notificaciones.ComprasPendientes > 0)
+                    {
+                        <span class="badge bg-warning ms-2" style="font-size: 0.7rem;">@notificaciones.ComprasPendientes</span>
+                    }
+                </NavLink>
+            </div>
+
+            <!-- SECCIÓN: PRODUCTOS -->
+            <div class="nav-item px-3 mt-3">
+                <small style="color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight: bold;">Productos</small>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="productos/nuevo" style="color: white;">
+                    <i class="fas fa-plus-circle me-2"></i> Nuevo Producto
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="productos" style="color: white;">
+                    <i class="fas fa-tags me-2"></i> Lista de Productos
+                    @if (notificaciones.StockBajo > 0)
+                    {
+                        <span class="badge bg-danger ms-2" style="font-size: 0.7rem;">@notificaciones.StockBajo</span>
+                    }
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="categorias" style="color: white;">
+                    <i class="fas fa-folder me-2"></i> Categorías
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="stock/movimientos" style="color: white;">
+                    <i class="fas fa-history me-2"></i> Historial de Stock
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="stock/ajuste" style="color: white;">
+                    <i class="fas fa-balance-scale me-2"></i> Ajuste de Stock
+                </NavLink>
+            </div>
+
+            <!-- SECCIÓN: CLIENTES -->
+            <div class="nav-item px-3 mt-3">
+                <small style="color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight: bold;">Clientes</small>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="clientes/nuevo" style="color: white;">
+                    <i class="fas fa-user-plus me-2"></i> Nuevo Cliente
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="clientes" style="color: white;">
+                    <i class="fas fa-users me-2"></i> Lista de Clientes
+                    @if (notificaciones.ClientesDeudores > 0)
+                    {
+                        <span class="badge bg-warning ms-2" style="font-size: 0.7rem;">@notificaciones.ClientesDeudores</span>
+                    }
+                </NavLink>
+            </div>
+
+            <!-- SECCIÓN: PROVEEDORES -->
+            <div class="nav-item px-3 mt-3">
+                <small style="color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight: bold;">Proveedores</small>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="proveedores/nuevo" style="color: white;">
+                    <i class="fas fa-truck me-2"></i> Nuevo Proveedor
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="proveedores" style="color: white;">
+                    <i class="fas fa-list me-2"></i> Lista de Proveedores
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="pagos-proveedor" style="color: white;">
+                    <i class="fas fa-hand-holding-usd me-2"></i> Pagos a Proveedores
+                </NavLink>
+            </div>
+
+            <!-- SECCIÓN: REPORTES (solo ADMIN) -->
+            @if (usuarioLogueado.Rol == "ADMIN")
+            {
+                <div class="nav-item px-3 mt-3">
+                    <small style="color: rgba(255,255,255,0.7); text-transform: uppercase; font-weight: bold;">Reportes</small>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="reportes/ventas" style="color: white;">
+                        <i class="fas fa-chart-line me-2"></i> Ventas por Período
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="reportes/productos" style="color: white;">
+                        <i class="fas fa-chart-pie me-2"></i> Productos Más Vendidos
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="reportes/deudores" style="color: white;">
+                        <i class="fas fa-users me-2"></i> Clientes Deudores
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="reportes/stock-bajo" style="color: white;">
+                        <i class="fas fa-exclamation-triangle me-2"></i> Stock Bajo
+                    </NavLink>
+                </div>
+            }
+
+            <!-- Botón cerrar sesión -->
+            <div class="nav-item px-3 mt-4">
+                <button class="btn w-100" @onclick="CerrarSesion"
+                        style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white;">
+                    <i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión
+                </button>
+            </div>
+        }
+        else
+        {
+            <!-- Opciones para no autenticados -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/login" style="color: white;">
+                    <i class="fas fa-sign-in-alt me-2"></i> Iniciar Sesión
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/registro" style="color: white;">
+                    <i class="fas fa-user-plus me-2"></i> Registrarse
+                </NavLink>
+            </div>
+        }
     </nav>
 </div>
 
+<style>
+    .notificacion-item {
+        cursor: pointer;
+        transition: background-color 0.2s;
+        border-radius: 4px;
+    }
+
+        .notificacion-item:hover {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+        }
+</style>
+
 @code {
     private bool collapseNavMenu = true;
-
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private UsuarioDTO? usuarioLogueado;
+    private NotificacionesDTO notificaciones = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var autenticado = await AuthService.EstaAutenticado();
+            if (autenticado)
+            {
+                usuarioLogueado = await AuthService.GetUsuarioActual();
+                await CargarNotificaciones();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando usuario: {ex.Message}");
+            usuarioLogueado = null;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarNotificaciones()
+    {
+        try
+        {
+            var respuesta = await NotificacionesService.Get();
+            if (!respuesta.Error)
+            {
+                notificaciones = respuesta.Respuesta ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando notificaciones: {ex.Message}");
+        }
+    }
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task CerrarSesion()
+    {
+        await AuthService.Logout();
+        usuarioLogueado = null;
+        Navigation.NavigateTo("/login", true);
+    }
+
+    // Métodos para navegación desde notificaciones
+    private void IrAProductos()
+    {
+        Navigation.NavigateTo("/productos");
+    }
+
+    private void IrAClientes()
+    {
+        Navigation.NavigateTo("/clientes");
+    }
+
+    private void IrACompras()
+    {
+        Navigation.NavigateTo("/compras");
+    }
+
+    private void IrAVentas()
+    {
+        Navigation.NavigateTo("/ventas");
     }
 }

@@ -92,7 +92,6 @@ namespace GestionDespensa1.Server.Repositorio
                 if (ventaExistente == null)
                     return false;
 
-                // Actualizar propiedades
                 ventaExistente.IdCliente = venta.IdCliente;
                 ventaExistente.FechaVenta = venta.FechaVenta;
                 ventaExistente.Estado = venta.Estado;
@@ -126,9 +125,5 @@ namespace GestionDespensa1.Server.Repositorio
                 return false;
             }
         }
-
-        // ELIMINA ESTOS MÉTODOS DUPLICADOS:
-        // Task<ActionResult<bool>> IVentaRepositorio.Existe(int id)
-        // Task<ActionResult<int>> IVentaRepositorio.Insert(Venta venta)
     }
 }
